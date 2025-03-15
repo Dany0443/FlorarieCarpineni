@@ -31,3 +31,4 @@ Site-ul este conceput pentru a demonstra creativitatea și abilitățile noastre
 - Telegram: [@Alexandru](https://t.me/WJTMainDev) [@Dan](https://t.me/Dany0443) 
 
 
+
