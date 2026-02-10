@@ -4,7 +4,7 @@
 # Website Florărie
 
 Bun venit în repository-ul Website Florărie! 
-Acest proiect a fost creat de Sans992 și Dany0443 ca parte a unui concurs. 
+Acest proiect a fost creat de Alexandru și Daniel ca parte a unui concurs. 
 Website-ul nostru demonstrează abilitățile noastre în dezvoltarea web printr-un site complet funcțional pentru o florărie.
 
 # Prezentare Generală 
@@ -28,7 +28,7 @@ Site-ul este conceput pentru a demonstra creativitatea și abilitățile noastre
 
 - Main Developer [@Sans992](https://github.com/Sans992)
 - Second Developer [@Dany0443](https://github.com/Dany0443) 
-- Telegram: [@Alexandru](https://t.me/WJTMainDev) [@Dan](https://t.me/Dany0443) 
+- Telegram: [@Alexandru](https://t.me/WJTMainDev); [@Dan](https://t.me/Dany0443) 
 
 
 
