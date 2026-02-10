@@ -26,7 +26,7 @@ Site-ul este conceput pentru a demonstra creativitatea și abilitățile noastre
 # Contact
  Pentru întrebări sau feedback, ne puteți contacta prin:
 
-- DEVS [@Sans992](https://github.com/Sans992) [@Dany0443](https://github.com/Dany0443) 
+- Devs [@Sans992](https://github.com/Sans992) : [@Dany0443](https://github.com/Dany0443) 
 - Telegram: [@Alexandru](https://t.me/WJTMainDev) : [@Dan](https://t.me/Dany0443) 
 
 
