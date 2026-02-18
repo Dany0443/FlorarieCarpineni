@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizare Comandă - Luci Boutique</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Loading Bar -->
+    <div id="loader">
+        <div class="loader-bar-bg"><div class="loader-bar-fill"></div></div>
+    </div>
+
+    <!-- Simple Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">Luci Boutique.</a>
+            <a href="/" style="text-decoration:none; color:var(--text-main);">← Înapoi la magazin</a>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:2rem;">Finalizare Comandă</h1>
+        
+        <div id="order-summary" style="background:#fff; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:var(--shadow);">
+            <h3>Total de plată: <span id="checkout-total" style="color:var(--primary);">0 MDL</span></h3>
+            <p style="color:#666; font-size:0.9rem;">Plata se face la livrare (ramburs).</p>
+        </div>
+
+        <form id="checkout-form" style="background:#fff; padding:30px; border-radius:12px; box-shadow:var(--shadow);">
+            <div class="form-group">
+                <label>Nume Prenume</label>
+                <input type="text" id="name" required placeholder="Ex: Ion Popescu">
+            </div>
+            
+            <div class="form-group">
+                <label>Telefon</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    required 
+                    placeholder="069 123 456" 
+                    maxlength="15"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Email (Opțional)</label>
+                <input type="email" id="email" placeholder="ion@email.com">
+            </div>
+
+            <div class="form-group">
+                <label>Adresa de Livrare</label>
+                <textarea id="address" rows="3" required placeholder="Strada, Numar, Oras..."></textarea>
+            </div>
+
+            <button type="submit" class="cta-btn" style="width:100%; border:none;">Trimite Comanda</button>
+        </form>
+    </div>
+
+    <script>
+        // load localstorage . cosullww
+        const cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
+        const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+        document.getElementById('checkout-total').innerText = total + " MDL";
+
+        //Daca e cosul gol, il trimitem acasa
+        if(cart.length === 0) {
+            alert("Cosul e gol!");
+            window.location.href = '/';
+        }
+
+        //Handle   Submit
+        document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button');
+            submitBtn.innerText = "Se trimite...";
+            submitBtn.disabled = true;
+
+            const orderData = {
+                customer: {
+                    name: document.getElementById('name').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value,
+                    address: document.getElementById('address').value
+                },
+                cart: cart,
+                total: total
+            };
+
+            try {
+                // Chemam ruta corecta acum
+                const response = await fetch('/api/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                // Verific daca raspunsul e JSON
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new TypeError("Serverul nu a trimis JSON!");
+                }
+
+                const result = await response.json();
+
+                if(result.success) {
+                    alert("Comanda a fost trimisă! Te sunăm noi.");
+                    localStorage.removeItem('flowerCart');
+                    window.location.href = '/';
+                } else {
+                    alert("Eroare: " + result.error);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Ceva nu a mers bine. Verifica consola sau suna-ne.");
+                submitBtn.innerText = "Incearca iar";
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Hide Loader
+        window.addEventListener('load', () => {
+             document.getElementById('loader').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

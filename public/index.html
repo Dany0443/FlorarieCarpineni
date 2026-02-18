@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luci Boutique</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- LOADER -->
+    <div id="loader">
+        <img src="assets/logo.png" alt="Logo" class="loader-logo" onerror="this.style.display='none'">
+        <div class="loader-bar-bg">
+            <div class="loader-bar-fill"></div>
+        </div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">Luci Boutique.</a>
+            
+            <div class="nav-links">
+                <a href="index.html">Acasă</a>
+                <a href="#shop">Colecție</a>
+                <a href="contact.html">Contact</a>
+            </div>
+
+            <div class="nav-icons">
+                <button id="cart-btn" class="icon-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                    <span id="cart-count">0</span>
+                </button>
+                <button id="menu-btn" class="icon-btn mobile-only">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu">
+        <button class="close-menu">✕</button>
+        <a href="index.html">Acasă</a>
+        <a href="#shop">Colecție</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+    <header id="home" class="hero">
+        <div class="hero-blob"></div>
+
+        <div class="hero-container">
+            <div class="hero-text-content">
+                <p class="subtitle">Artă Naturală</p>
+                
+                <h1 class="title">
+                    Emoții care <br>
+                    <span class="highlight-text">Înfloresc.</span>
+                </h1>
+                
+                <p class="desc">
+                    Cele mai proaspete flori, aranjate cu stil pentru tine. 
+                </p>
+                
+                <div class="hero-buttons">
+                    <button onclick="document.getElementById('shop').scrollIntoView()" class="cta-btn hero-main-btn">
+                        Vezi Colecția
+                    </button>
+                    <a href="contact.html" class="secondary-btn">Contactează-ne</a>
+                </div>
+            </div>
+
+            
+            <div class="hero-visual">
+                <img src="assets/Anthurium Lily.avif" alt="Floare Hero" class="hero-img">
+            </div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <a href="#shop" class="scroll-indicator">
+            <div class="mouse">
+                <div class="wheel"></div>
+            </div>
+        </a>
+        
+    </header>
+
+        <section class="info-section">
+        <h2>De ce noi?</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Prospețime</h3>
+                <p>Florile noastre vin direct de la producători, proaspete în fiecare dimineață.</p>
+            </div>
+            <div class="info-card">
+                <h3>Livrare Rapidă</h3>
+                <p>Comanzi acum, și în câteva ore florile sunt la ușa ta.</p>
+            </div>
+            <div class="info-card">
+                <h3>Design Unic</h3>
+                <p>Fiecare buchet este o operă de artă, creat cu pasiune.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SHOP SECTION -->
+    <section id="shop" class="shop-section">
+        <div class="section-header">
+            <h2>Colecția 2025</h2>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">Toate</button>
+                <button class="filter-btn" data-filter="Exotic">Exotice</button>
+                <button class="filter-btn" data-filter="Classic">Clasice</button>
+            </div>
+        </div>
+        
+        <div class="products-grid" id="products-container">
+            <!-- JS injects cards here -->
+        </div>
+    </section>
+
+        <section class="services-section">
+        <div class="services-header">
+            <h2>Universul Cadourilor</h2>
+            <p>Pentru că o floare vine rareori singură. Completează cadoul perfect.</p>
+        </div>
+        
+        <div class="services-grid">
+            <!-- Card 1: Baloane -->
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/baloon.png" alt="Baloane cu Heliu" onerror="this.src='https://placehold.co/400x300?text=Baloane'">
+                </div>
+                <div class="service-content">
+                    <h3>Baloane cu Heliu</h3>
+                    <p>Ridică ștacheta petrecerii! Avem baloane în toate formele și culorile pentru momente festive.</p>
+                </div>
+            </div>
+
+            <!-- Card 2: Jucarii -->
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/jucarii.png" alt="Jucării de Pluș" onerror="this.src='https://placehold.co/400x300?text=Jucarii'">
+                </div>
+                <div class="service-content">
+                    <h3>Jucării de Pluș</h3>
+                    <p>Ursuleți giganți și prieteni pufoși care așteaptă să fie îmbrățișați. Cadoul clasic și adorabil.</p>
+                </div>
+            </div>
+
+            <!-- Card 3: Cutii Surpriza -->
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/hartie.png" alt="Cutii Surpriză" onerror="this.src='https://placehold.co/400x300?text=Surprize'">
+                </div>
+                <div class="service-content">
+                    <h3>Cutii Surpriză</h3>
+                    <p>Combinația fatală: flori proaspete, dulciuri fine și mici atenții, toate într-o cutie elegantă.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CART SIDEBAR -->
+    <div class="cart-overlay"></div>
+    <aside class="cart-drawer">
+        <div class="cart-header">
+            <h3>Coșul Tău</h3>
+            <button class="close-cart">✕</button>
+        </div>
+        <div class="cart-items"></div>
+        <div class="cart-footer">
+            <div class="total-row" style="display:flex; justify-content:space-between; margin-bottom:10px; font-weight:bold;">
+                <span>Total:</span>
+                <span id="cart-total">0 MDL</span>
+            </div>
+            <button id="checkout-btn" class="checkout-btn">Finalizează Comanda</button>
+        </div>
+    </aside>
+
+    <!-- PRODUCT MODAL -->
+    <div class="modal-overlay" id="product-modal">
+        <div class="modal-content">
+            <button class="modal-close">✕</button>
+            <div class="modal-left">
+                <img src="" alt="" class="modal-img">
+            </div>
+            <div class="modal-details">
+                <h2 class="modal-title">Nume Floare</h2>
+                <div class="modal-text-block">
+                    <p id="modal-family"><strong>Familie:</strong> ...</p>
+                    <p id="modal-desc"><strong>Descriere:</strong> ...</p>
+                    <p id="modal-care"><strong>Îngrijire:</strong> ...</p>
+                    <p id="modal-note"><em>Nota: ...</em></p>
+                </div>
+                <div class="modal-actions">
+                    <p class="modal-price">100 MDL</p>
+                    <button class="cta-btn modal-add-btn">Adaugă în coș</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-3d" style="z-index: 3000;">
+        <div class="modal-content modal-3d-content">
+            <button class="modal-close" id="close-3d">✕</button>
+            
+            <div class="model-wrapper">
+                <model-viewer 
+                    id="flower-viewer"
+                    alt="3D Flower"
+                    auto-rotate 
+                    camera-controls
+                    shadow-intensity="1"
+                    environment-image="neutral"
+                    exposure="1"
+                    loading="eager">
+                    
+                    <div class="progress-bar" slot="progress-bar">
+                        <div class="update-bar"></div>
+                    </div>
+                </model-viewer>
+                
+                <div class="model-controls">
+                    <p> Rotește și mărește</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Florăria Cărpineni.</p>
+    </footer>
+
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

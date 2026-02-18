@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Luci Boutique</title>
+    <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        a.info-card {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        a.info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Loader -->
+    <div id="loader">
+        <div class="loader-bar-bg"><div class="loader-bar-fill"></div></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">Luci Boutique.</a>
+            <div class="nav-links">
+                <a href="index.html">Acasă</a>
+                <a href="index.html#shop">Colecție</a>
+                <a href="contact.html" style="color:var(--primary);">Contact</a>
+            </div>
+             <div class="nav-icons mobile-only">
+                <a href="index.html" style="text-decoration:none; color:var(--text-main);">← Înapoi</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:1rem; font-size:2.5rem;">Contactează-ne</h1>
+        <p style="text-align:center; margin-bottom:3rem; color:#666;">
+            Ai întrebări? Suntem aici să te ajutăm cu orice detaliu despre flori.
+        </p>
+
+        <div class="info-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 40px; gap: 1rem;">
+            <!-- Phone Button -->
+            <a href="tel:069123456" class="info-card" style="background:var(--bg-color); padding:30px 20px; border-radius:12px; text-align:center;">
+                <h3>Telefon</h3>
+                <p style="font-size: 1.2rem; font-weight: 600; margin-top: 10px;">068 167 766</p>
+            </a>
+            
+            <a href="https://maps.app.goo.gl/E5h2zuHgUVXVnXNB8" target="_blank" class="info-card" style="background:var(--bg-color); padding:30px 20px; border-radius:12px; text-align:center;">
+                <h3>Locație</h3>
+                <p style="font-size: 1.1rem; margin-top: 10px;">Cărpineni, Moldova</p>
+            </a>
+        </div>
+
+        <form>
+            <div class="form-group">
+                <label>Numele Tău</label>
+                <input type="text" placeholder="Cum te cheamă?">
+            </div>
+            <div class="form-group">
+                <label>Mesajul Tău</label>
+                <textarea rows="5" placeholder="Cu ce te putem ajuta?"></textarea>
+            </div>
+            <button class="cta-btn" style="width:100%;">Trimite Mesaj</button>
+        </form>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Florăria Cărpineni.</p>
+    </footer>
+
+    <script>
+        // Hide loader
+        window.addEventListener('load', () => {
+             document.getElementById('loader').classList.add('hidden');
+        });
+        
+        // Form submit demo
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert("Mesajul a fost trimis! Îți răspundem repede.");
+        });
+    </script>
+</body>
+</html>
