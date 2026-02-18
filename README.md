@@ -48,6 +48,7 @@ Proiect realizat de:
 
 Contact Telegram: [@Alexandru](https://t.me/WJTMainDev) / [@Dan](https://t.me/Dany0443)
 
-Licență
+
+## Licență
 
 Acest proiect este Open Source în scop educațional, creat pentru evaluare în cadrul competiției. Imaginile și modelele 3D sunt folosite cu titlu demonstrativ.
