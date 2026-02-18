@@ -1,0 +1,26 @@
+{
+  "name": "luciboutique",
+  "version": "2.1.0",
+  "description": "Luci Boutique",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "flower",
+    "shop",
+    "ecommerce"
+  ],
+  "author": "Dan and Sanea",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "@latest",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "nodemailer": "^8.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
