@@ -121,16 +121,26 @@ if(menuBtn && closeMenuBtn) {
 function renderProducts(category) {
     if(!productContainer) return;
 
-    if(currentCategory === category && productContainer.children.length > 0) {
+    const hasRealCards = productContainer.querySelector('.card') !== null;
+    if(currentCategory === category && hasRealCards) {
         return;
     }
     currentCategory = category;
 
-    const fragment = document.createDocumentFragment();
-
     const filtered = category === 'all'
         ? allProducts
         : allProducts.filter(p => p.category === category);
+
+    if(filtered.length === 0) {
+        productContainer.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:3rem 1rem; color:var(--text-muted);">
+                <p style="font-size:1.1rem; margin-bottom:0.5rem;">Nu am găsit produse în această categorie.</p>
+                <p style="font-size:0.9rem;">Încearcă o altă categorie sau revino mai târziu.</p>
+            </div>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
 
     filtered.forEach(product => {
         const inCartItem = cart.find(item => item.id === product.id);
@@ -437,11 +447,22 @@ function updateCartUI() {
     let total = 0;
     let count = 0;
 
+    const checkoutBtnEl = document.querySelector('.checkout-btn');
+
     if(cart.length === 0) {
         cartItemsContainer.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-muted);">${t('cart_empty')}</p>`;
         if(cartTotalEl) cartTotalEl.innerText = "0 MDL";
-        if(cartCountEl) cartCountEl.innerText = "0";
+        if(cartCountEl) { cartCountEl.innerText = "0"; cartCountEl.dataset.count = "0"; }
+        if(checkoutBtnEl) {
+            checkoutBtnEl.dataset.i18n = 'cart_see_products';
+            checkoutBtnEl.textContent = t('cart_see_products');
+        }
         return;
+    }
+
+    if(checkoutBtnEl) {
+        checkoutBtnEl.dataset.i18n = 'cart_checkout';
+        checkoutBtnEl.textContent = t('cart_checkout');
     }
 
     const fragment = document.createDocumentFragment();
@@ -461,7 +482,7 @@ function updateCartUI() {
                     <span>${item.qty} buc</span>
                     <button type="button" class="qty-btn" onclick="addToCart(${item.id})" aria-label="Creste cantitatea">+</button>
                 </div>
-                <p style="font-size:0.9rem; margin-top:5px; color:#666;">${item.price * item.qty} MDL</p>
+                <p style="font-size:0.9rem; margin-top:5px; color:var(--text-muted);">${item.price * item.qty} MDL</p>
             </div>
             <button type="button" onclick="removeFromCart(${item.id})" class="remove-btn" aria-label="Elimina din cos">&times;</button>
         `;
@@ -472,7 +493,7 @@ function updateCartUI() {
     cartItemsContainer.appendChild(fragment);
 
     if(cartTotalEl) cartTotalEl.innerText = total + " MDL";
-    if(cartCountEl) cartCountEl.innerText = count;
+    if(cartCountEl) { cartCountEl.innerText = count; cartCountEl.dataset.count = count; }
 }
 
 if(cartBtn) cartBtn.addEventListener('click', () => {
@@ -495,7 +516,8 @@ if(cartOverlay) cartOverlay.addEventListener('click', closeCartDrawer);
 if(checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
         if (cart.length === 0) {
-            showNotification(t('notif_empty'));
+            closeCartDrawer();
+            document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
         } else {
             window.location.href = '/checkout';
         }
@@ -569,3 +591,16 @@ window.onLangChange = function() {
     renderProducts(cat);
     updateCartUI();
 };
+
+// Hero CTA button — moved from inline onclick
+const heroCta = document.getElementById('hero-cta-btn');
+if(heroCta) {
+    heroCta.addEventListener('click', () => {
+        document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+    });
+}
+
+// Initialize cart count badge visibility on page load
+if(cartCountEl) {
+    cartCountEl.dataset.count = cart.length === 0 ? '0' : cartCountEl.innerText || '0';
+}

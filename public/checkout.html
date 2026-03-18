@@ -5,11 +5,40 @@
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizare Comanda - Luci Boutique</title>
+    <meta name="description" content="Finalizează comanda ta la Luci Boutique. Livrare rapidă, plată la livrare.">
+    <meta name="robots" content="noindex">
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .form-container {
-            flex: 1;
+        .form-container { flex: 1; }
+        .page-title {
+            text-align: center;
+            font-family: var(--font-heading);
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            color: var(--text-main);
+        }
+        .order-summary {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition-theme);
+        }
+        .order-summary h3 { color: var(--text-main); }
+        .order-summary .total-amount { color: var(--primary); }
+        .order-summary .payment-note {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .checkout-form-box {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: var(--transition-theme);
         }
         .form-feedback {
             display: none;
@@ -20,21 +49,18 @@
             font-size: 0.95rem;
             line-height: 1.5;
         }
-        .form-feedback.success {
-            background: #e6f4ea;
-            color: #2d7a3a;
-            border: 1px solid #a8d5b0;
-        }
-        .form-feedback.error {
-            background: #fdecea;
-            color: #aa0132;
-            border: 1px solid #f5c2c7;
-        }
-        .order-id {
-            font-weight: 600;
-            letter-spacing: 0.03em;
-        }
+        .form-feedback.success { background: #e6f4ea; color: #2d7a3a; border: 1px solid #a8d5b0; }
+        .form-feedback.error   { background: #fdecea; color: #aa0132; border: 1px solid #f5c2c7; }
+        .order-id { font-weight: 600; letter-spacing: 0.03em; }
         .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .nav-back-link {
+            text-decoration: none;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            transition: color 0.2s;
+        }
+        .nav-back-link:hover { color: var(--primary); }
+        .submit-btn-full { width: 100%; border: none; }
     </style>
 </head>
 <body>
@@ -46,44 +72,37 @@
     <nav class="navbar">
         <div class="nav-container">
             <a href="/" class="logo">Luci Boutique.</a>
-            <a href="/" style="text-decoration:none; color:var(--text-main);" data-i18n="nav_back">Inapoi la magazin</a>
+            <a href="/" class="nav-back-link" data-i18n="nav_back">Inapoi la magazin</a>
         </div>
     </nav>
 
     <div class="form-container">
-        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:2rem;" data-i18n="checkout_title">Finalizare Comanda</h1>
+        <h1 class="page-title" data-i18n="checkout_title">Finalizare Comanda</h1>
 
-        <div id="order-summary" style="background:var(--white); padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:var(--shadow);">
-            <h3><span data-i18n="checkout_total">Total de plata:</span> <span id="checkout-total" style="color:var(--primary);">0 MDL</span></h3>
-            <p style="color:var(--text-muted); font-size:0.9rem;" data-i18n="checkout_payment">Plata se face la livrare (ramburs).</p>
+        <div class="order-summary">
+            <h3><span data-i18n="checkout_total">Total de plata:</span> <span id="checkout-total" class="total-amount">0 MDL</span></h3>
+            <p class="payment-note" data-i18n="checkout_payment">Plata se face la livrare (ramburs).</p>
         </div>
 
-        <form id="checkout-form" style="background:var(--white); padding:30px; border-radius:12px; box-shadow:var(--shadow);">
+        <form id="checkout-form" class="checkout-form-box">
             <div class="form-group">
                 <label data-i18n="label_name">Nume Prenume</label>
-                <input type="text" id="name" required maxlength="80"
-                    autocomplete="name"
-                    data-i18n-ph="ph_name" placeholder="Ex: Ion Popescu">
+                <input type="text" id="name" required maxlength="80" autocomplete="name" data-i18n-ph="ph_name" placeholder="Ex: Ion Popescu">
             </div>
             <div class="form-group">
                 <label data-i18n="label_phone">Telefon</label>
-                <input type="tel" id="phone" required maxlength="15" minlength="8"
-                    autocomplete="tel"
-                    data-i18n-ph="ph_phone" placeholder="069 123 456"
+                <input type="tel" id="phone" required maxlength="15" minlength="8" autocomplete="tel" data-i18n-ph="ph_phone" placeholder="069 123 456"
                     oninput="this.value = this.value.replace(/[^0-9+\s\-]/g, '').slice(0,15)">
             </div>
             <div class="form-group">
                 <label data-i18n="label_email">Email (Optional)</label>
-                <input type="email" id="email" maxlength="120"
-                    autocomplete="email"
-                    data-i18n-ph="ph_email" placeholder="ion@email.com">
+                <input type="email" id="email" maxlength="120" autocomplete="email" data-i18n-ph="ph_email" placeholder="ion@email.com">
             </div>
             <div class="form-group">
                 <label data-i18n="label_address">Adresa de Livrare</label>
-                <textarea id="address" rows="3" required maxlength="300"
-                    data-i18n-ph="ph_address" placeholder="Strada, Numar, Oras..."></textarea>
+                <textarea id="address" rows="3" required maxlength="300" data-i18n-ph="ph_address" placeholder="Strada, Numar, Oras..."></textarea>
             </div>
-            <button type="submit" id="submitBtn" class="cta-btn" style="width:100%; border:none;" data-i18n="btn_submit">Trimite Comanda</button>
+            <button type="submit" id="submitBtn" class="cta-btn submit-btn-full" data-i18n="btn_submit">Trimite Comanda</button>
             <div id="formFeedback" class="form-feedback"></div>
         </form>
     </div>
@@ -92,8 +111,6 @@
     <script src="js/controls.js"></script>
     <script src="js/controls-swipe.js"></script>
     <script>
-        initLang();
-
         const cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
         if (cart.length === 0) { window.location.replace('/'); throw new Error('empty cart'); }
 

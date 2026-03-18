@@ -3,11 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luci Boutique</title>
+    <title>Luci Boutique — Flori Proaspete, Carpineni</title>
+    <meta name="description" content="Luci Boutique — cele mai proaspete flori din Carpineni, Moldova. Buchete elegante, baloane cu heliu, cutii surpriză și livrare rapidă.">
+    <meta name="keywords" content="flori, buchete, florarie, Carpineni, Moldova, livrare flori, Luci Boutique">
+    <meta name="author" content="Luci Boutique">
+    <meta property="og:title" content="Luci Boutique — Flori Proaspete">
+    <meta property="og:description" content="Cele mai proaspete flori, aranjate cu stil pentru tine. Livrare rapidă în Carpineni și împrejurimi.">
+    <meta property="og:image" content="assets/Anthurium Lily.avif">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ro_MD">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Luci Boutique — Flori Proaspete">
+    <meta name="twitter:description" content="Cele mai proaspete flori, aranjate cu stil pentru tine.">
+    <meta name="twitter:image" content="assets/Anthurium Lily.avif">
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="image" href="assets/Anthurium Lily.avif" fetchpriority="high">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -65,19 +78,16 @@
                 </h1>
                 <p class="desc" data-i18n="hero_desc">Cele mai proaspete flori, aranjate cu stil pentru tine.</p>
                 <div class="hero-buttons">
-                    <button onclick="document.getElementById('shop').scrollIntoView()" class="cta-btn hero-main-btn" data-i18n="hero_cta">
+                    <button id="hero-cta-btn" class="cta-btn hero-main-btn" data-i18n="hero_cta">
                         Vezi Colecția
                     </button>
                     <a href="contact.html" class="secondary-btn" data-i18n="hero_contact">Contactează-ne</a>
                 </div>
             </div>
             <div class="hero-visual">
-                <img src="assets/Anthurium Lily.avif" alt="Floare Hero" class="hero-img">
+                <img src="assets/Anthurium Lily.avif" alt="Floare Hero" class="hero-img" fetchpriority="high">
             </div>
         </div>
-        <a href="#shop" class="scroll-indicator">
-            <div class="mouse"><div class="wheel"></div></div>
-        </a>
     </header>
 
     <section class="info-section">
@@ -156,7 +166,7 @@
         </div>
         <div class="cart-items"></div>
         <div class="cart-footer">
-            <div class="total-row" style="display:flex; justify-content:space-between; margin-bottom:10px; font-weight:bold;">
+            <div class="total-row">
                 <span data-i18n="cart_total">Total:</span>
                 <span id="cart-total">0 MDL</span>
             </div>

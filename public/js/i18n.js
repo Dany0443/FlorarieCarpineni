@@ -25,7 +25,7 @@ const TRANSLATIONS = {
         why_3_desc:     'Fiecare buchet este o operă de artă, creat cu pasiune.',
 
         // Shop
-        shop_title:     'Colecția 2025',
+        shop_title:     'Colecția 2026',
         filter_all:     'Toate',
         filter_exotic:  'Exotice',
         filter_classic: 'Clasice',
@@ -49,6 +49,7 @@ const TRANSLATIONS = {
         cart_empty:     'Coșul este gol.',
         cart_total:     'Total:',
         cart_checkout:  'Finalizează Comanda',
+        cart_see_products: 'Vezi produsele',
         cart_add_notif: 'Adaugă ceva frumos.',
 
         // Modal
@@ -123,7 +124,7 @@ const TRANSLATIONS = {
         why_3_title:    'Unique Design',
         why_3_desc:     'Every bouquet is a work of art, created with passion.',
 
-        shop_title:     'Collection 2025',
+        shop_title:     'Collection 2026',
         filter_all:     'All',
         filter_exotic:  'Exotic',
         filter_classic: 'Classic',
@@ -145,6 +146,7 @@ const TRANSLATIONS = {
         cart_empty:     'Your cart is empty.',
         cart_total:     'Total:',
         cart_checkout:  'Checkout',
+        cart_see_products: 'See products',
         cart_add_notif: 'Add something beautiful.',
 
         modal_family:   'Family:',
@@ -214,7 +216,7 @@ const TRANSLATIONS = {
         why_3_title:    'Уникальный Дизайн',
         why_3_desc:     'Каждый букет — произведение искусства, созданное с любовью.',
 
-        shop_title:     'Коллекция 2025',
+        shop_title:     'Коллекция 2026',
         filter_all:     'Все',
         filter_exotic:  'Экзотика',
         filter_classic: 'Классика',
@@ -236,6 +238,7 @@ const TRANSLATIONS = {
         cart_empty:     'Корзина пуста.',
         cart_total:     'Итого:',
         cart_checkout:  'Оформить Заказ',
+        cart_see_products: 'Смотреть товары',
         cart_add_notif: 'Добавьте что-нибудь красивое.',
 
         modal_family:   'Семейство:',
