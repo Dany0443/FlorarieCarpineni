@@ -91,7 +91,7 @@ const TRANSLATIONS = {
         btn_sending2:     'Se trimite...',
 
         // Footer
-        footer: '© 2025 Florăria Cărpineni.',
+        footer: '© 2026 Florăria Cărpineni.',
 
         // Notificationsssss
         notif_added:    'Am adăugat "{name}" în coș!',
@@ -183,7 +183,7 @@ const TRANSLATIONS = {
         btn_send:         'Send Message',
         btn_sending2:     'Sending...',
 
-        footer: '© 2025 Florăria Cărpineni.',
+        footer: '© 2026 Florăria Cărpineni.',
 
         notif_added:    'Added "{name}" to cart!',
         notif_more:     'Added another {name}! ({qty})',
@@ -274,7 +274,7 @@ const TRANSLATIONS = {
         btn_send:         'Отправить',
         btn_sending2:     'Отправляется...',
 
-        footer: '© 2025 Florăria Cărpineni.',
+        footer: '© 2026 Florăria Cărpineni.',
 
         notif_added:    '"{name}" добавлен в корзину!',
         notif_more:     'Ещё один {name}! ({qty})',
