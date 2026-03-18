@@ -1,3 +1,6 @@
+// rewrite the entire server.js V4 speram ca de data asta merge cum trebu
+// patch 4.3
+
 require('dotenv').config();
 
 // aducem modulele necesare pentru server
