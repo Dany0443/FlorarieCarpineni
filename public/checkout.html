@@ -2,136 +2,189 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finalizare Comandă - Luci Boutique</title>
-    
-    <!-- Fonts -->
+    <title>Finalizare Comanda - Luci Boutique</title>
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .form-feedback {
+            display: none;
+            margin-top: 1rem;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-family: var(--font-body, Montserrat, sans-serif);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .form-feedback.success {
+            background: #e6f4ea;
+            color: #2d7a3a;
+            border: 1px solid #a8d5b0;
+        }
+        .form-feedback.error {
+            background: #fdecea;
+            color: #aa0132;
+            border: 1px solid #f5c2c7;
+        }
+        .order-id {
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+        .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
 </head>
 <body>
 
-    <!-- Loading Bar -->
     <div id="loader">
         <div class="loader-bar-bg"><div class="loader-bar-fill"></div></div>
     </div>
 
-    <!-- Simple Navbar -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="/" class="logo">Luci Boutique.</a>
-            <a href="/" style="text-decoration:none; color:var(--text-main);">← Înapoi la magazin</a>
+            <a href="/" style="text-decoration:none; color:var(--text-main);" data-i18n="nav_back">Inapoi la magazin</a>
         </div>
     </nav>
 
     <div class="form-container">
-        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:2rem;">Finalizare Comandă</h1>
-        
-        <div id="order-summary" style="background:#fff; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:var(--shadow);">
-            <h3>Total de plată: <span id="checkout-total" style="color:var(--primary);">0 MDL</span></h3>
-            <p style="color:#666; font-size:0.9rem;">Plata se face la livrare (ramburs).</p>
+        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:2rem;" data-i18n="checkout_title">Finalizare Comanda</h1>
+
+        <div id="order-summary" style="background:var(--white); padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:var(--shadow);">
+            <h3><span data-i18n="checkout_total">Total de plata:</span> <span id="checkout-total" style="color:var(--primary);">0 MDL</span></h3>
+            <p style="color:var(--text-muted); font-size:0.9rem;" data-i18n="checkout_payment">Plata se face la livrare (ramburs).</p>
         </div>
 
-        <form id="checkout-form" style="background:#fff; padding:30px; border-radius:12px; box-shadow:var(--shadow);">
+        <form id="checkout-form" style="background:var(--white); padding:30px; border-radius:12px; box-shadow:var(--shadow);">
             <div class="form-group">
-                <label>Nume Prenume</label>
-                <input type="text" id="name" required placeholder="Ex: Ion Popescu">
+                <label data-i18n="label_name">Nume Prenume</label>
+                <input type="text" id="name" required maxlength="80"
+                    autocomplete="name"
+                    data-i18n-ph="ph_name" placeholder="Ex: Ion Popescu">
             </div>
-            
             <div class="form-group">
-                <label>Telefon</label>
-                <input 
-                    type="tel" 
-                    id="phone" 
-                    required 
-                    placeholder="069 123 456" 
-                    maxlength="15"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                >
+                <label data-i18n="label_phone">Telefon</label>
+                <input type="tel" id="phone" required maxlength="15" minlength="8"
+                    autocomplete="tel"
+                    data-i18n-ph="ph_phone" placeholder="069 123 456"
+                    oninput="this.value = this.value.replace(/[^0-9+\s\-]/g, '').slice(0,15)">
             </div>
-
             <div class="form-group">
-                <label>Email (Opțional)</label>
-                <input type="email" id="email" placeholder="ion@email.com">
+                <label data-i18n="label_email">Email (Optional)</label>
+                <input type="email" id="email" maxlength="120"
+                    autocomplete="email"
+                    data-i18n-ph="ph_email" placeholder="ion@email.com">
             </div>
-
             <div class="form-group">
-                <label>Adresa de Livrare</label>
-                <textarea id="address" rows="3" required placeholder="Strada, Numar, Oras..."></textarea>
+                <label data-i18n="label_address">Adresa de Livrare</label>
+                <textarea id="address" rows="3" required maxlength="300"
+                    data-i18n-ph="ph_address" placeholder="Strada, Numar, Oras..."></textarea>
             </div>
-
-            <button type="submit" class="cta-btn" style="width:100%; border:none;">Trimite Comanda</button>
+            <button type="submit" id="submitBtn" class="cta-btn" style="width:100%; border:none;" data-i18n="btn_submit">Trimite Comanda</button>
+            <div id="formFeedback" class="form-feedback"></div>
         </form>
     </div>
 
+    <script src="js/i18n.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/controls-swipe.js"></script>
     <script>
-        // load localstorage . cosullww
+        initLang();
+
         const cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
+        if (cart.length === 0) { window.location.replace('/'); throw new Error('empty cart'); }
+
         const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        document.getElementById('checkout-total').innerText = total + ' MDL';
 
-        document.getElementById('checkout-total').innerText = total + " MDL";
-
-        //Daca e cosul gol, il trimitem acasa
-        if(cart.length === 0) {
-            alert("Cosul e gol!");
-            window.location.href = '/';
+        function sanitizeText(str, maxLen) {
+            return String(str).trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, maxLen);
         }
 
-        //Handle   Submit
+        function isValidEmail(email) {
+            return /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(email);
+        }
+
+        function showFeedback(type, html) {
+            const el = document.getElementById('formFeedback');
+            el.innerHTML     = html;
+            el.className     = `form-feedback ${type}`;
+            el.style.display = 'block';
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
         document.getElementById('checkout-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button');
-            submitBtn.innerText = "Se trimite...";
+
+            const name    = sanitizeText(document.getElementById('name').value, 80);
+            const phone   = sanitizeText(document.getElementById('phone').value, 15).replace(/[^0-9+\s\-]/g, '');
+            const email   = sanitizeText(document.getElementById('email').value, 120);
+            const address = sanitizeText(document.getElementById('address').value, 300);
+
+            if (name.length < 2)                        return showFeedback('error', t('notif_cart_err'));
+            if (phone.replace(/\D/g,'').length < 8)     return showFeedback('error', t('notif_cart_err'));
+            if (email && !isValidEmail(email))           return showFeedback('error', t('notif_cart_err'));
+            if (address.length < 5)                      return showFeedback('error', t('notif_cart_err'));
+
+            const safeCart = cart
+                .filter(i => i && typeof i.name === 'string' && Number.isFinite(i.price) && Number.isInteger(i.qty))
+                .map(i => ({
+                    name:  sanitizeText(i.name, 120),
+                    qty:   Math.max(1, Math.min(99, i.qty)),
+                    price: Math.max(0, Number(i.price.toFixed(2)))
+                }));
+
+            if (safeCart.length === 0) return showFeedback('error', t('cart_empty'));
+
+            const safeTotal = safeCart.reduce((acc, i) => acc + i.price * i.qty, 0);
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.textContent = t('btn_sending');
             submitBtn.disabled = true;
 
             const orderData = {
-                customer: {
-                    name: document.getElementById('name').value,
-                    phone: document.getElementById('phone').value,
-                    email: document.getElementById('email').value,
-                    address: document.getElementById('address').value
-                },
-                cart: cart,
-                total: total
+                customer: { name, phone, email, address },
+                cart: safeCart,
+                total: safeTotal
             };
 
             try {
-                // Chemam ruta corecta acum
-                const response = await fetch('/api/order', {
-                    method: 'POST',
+                const response    = await fetch('/api/order', {
+                    method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
+                    body:    JSON.stringify(orderData)
                 });
-
-                // Verific daca raspunsul e JSON
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new TypeError("Serverul nu a trimis JSON!");
-                }
-
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) throw new TypeError('No JSON');
                 const result = await response.json();
 
-                if(result.success) {
-                    alert("Comanda a fost trimisă! Te sunăm noi.");
+                if (result.success) {
                     localStorage.removeItem('flowerCart');
-                    window.location.href = '/';
+                    showFeedback('success',
+                        `${t('cart_checkout')}!<br>
+                        Nr. comenzii: <span class="order-id">${result.orderId}</span><br>
+                        <small>Redirectionare in cateva secunde...</small>`
+                    );
+                    setTimeout(() => window.location.href = '/', 4000);
                 } else {
-                    alert("Eroare: " + result.error);
+                    showFeedback('error', result.error || t('notif_cart_err'));
+                    submitBtn.textContent = t('btn_retry');
+                    submitBtn.disabled = false;
                 }
-
             } catch (err) {
-                console.error(err);
-                alert("Ceva nu a mers bine. Verifica consola sau suna-ne.");
-                submitBtn.innerText = "Incearca iar";
+                showFeedback('error', t('notif_cart_err'));
+                submitBtn.textContent = t('btn_retry');
                 submitBtn.disabled = false;
             }
         });
 
-        // Hide Loader
         window.addEventListener('load', () => {
-             document.getElementById('loader').classList.add('hidden');
+            document.getElementById('loader').classList.add('hidden');
         });
+
+        window.onLangChange = function() {
+            document.getElementById('submitBtn').textContent = t('btn_submit');
+        };
     </script>
 </body>
 </html>

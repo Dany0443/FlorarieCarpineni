@@ -1,7 +1,19 @@
 let preloadedModels = new Set();
 let isModalTransitioning = false;
+let allProducts = [];
 
-// SELECTORS
+// setari minime daca e pe dispozitiv slab
+const PE_MOBIL = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
+
+const DISPOZITIV_SLAB = PE_MOBIL && (
+    (navigator.hardwareConcurrency || 4) < 4 ||
+    (navigator.deviceMemory || 4) < 2
+);
+
+const CACHE_MODELE = 'lb-modele-3d-v1';
+const modeleCached = new Set();
+
 const mobileMenu = document.querySelector('.mobile-menu');
 const menuBtn = document.getElementById('menu-btn');
 const closeMenuBtn = document.querySelector('.close-menu');
@@ -15,7 +27,6 @@ const cartTotalEl = document.getElementById('cart-total');
 const cartCountEl = document.getElementById('cart-count');
 const checkoutBtn = document.getElementById('checkout-btn');
 
-// MODAL SELECTORS 
 const modal = document.getElementById('product-modal');
 const modalImg = modal?.querySelector('.modal-img');
 const modalTitle = modal?.querySelector('.modal-title');
@@ -32,28 +43,37 @@ const close3D = document.getElementById('close-3d');
 const modelViewer = document.getElementById('flower-viewer');
 
 let cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
-let currentCategory = 'all'; 
+let currentCategory = 'all';
 
-// initss
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
         const loader = document.getElementById('loader');
         if(loader) {
             loader.classList.add('hidden');
-
             setTimeout(() => loader.remove(), 500);
         }
-    }, 800); 
+    }, 800);
 
-    // Render products
+    // tragem produsele proaspete de pe server
+    try {
+        const res  = await fetch('/api/products');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+            allProducts = data.products;
+        } else {
+            allProducts = [...productsData];
+        }
+    } catch {
+        allProducts = [...productsData];
+    }
+
     if(productContainer) {
         renderProducts('all');
     }
-    
+
     updateCartUI();
     setupScrollAnimations();
-    
-    // some preloading for performanta mai buna
+
     if (window.requestIdleCallback) {
         requestIdleCallback(() => preload3DModels(), { timeout: 3000 });
     } else {
@@ -61,29 +81,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 3D Models function
+// pastram in cache sa se miste oleaca mai repede
+async function cacheazaModel(url) {
+    if (modeleCached.has(url)) return;
+    modeleCached.add(url);
+    try {
+        const cache = await caches.open(CACHE_MODELE);
+        const exista = await cache.match(url);
+        if (exista) return;
+        const resp = await fetch(url, { mode: 'cors', credentials: 'same-origin' });
+        if (resp.ok) await cache.put(url, resp);
+    } catch (_) {
+        modeleCached.delete(url);
+    }
+}
+
 function preload3DModels() {
-    const modelsToPreload = productsData
-        .filter(p => p.model3d)
-        .map(p => p.model3d);
-    
-    modelsToPreload.forEach(modelPath => {
-        const link = document.createElement('link');
-        link.rel = 'prefetch';
-        link.as = 'fetch';
-        link.href = modelPath;
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
-        preloadedModels.add(modelPath);
-    });
-    
-    console.log(`Preloaded ${modelsToPreload.length} 3D models for instant viewing`);
+    if (PE_MOBIL) return;
+
+    const modele = allProducts.filter(p => p.model3d).map(p => p.model3d);
+    if (!modele.length) return;
+
+    if ('caches' in window) {
+        modele.forEach((url, i) => {
+            setTimeout(() => cacheazaModel(url), i * 800);
+        });
+    }
 }
 
 if(menuBtn && closeMenuBtn) {
     menuBtn.addEventListener('click', () => mobileMenu.classList.add('active'));
     closeMenuBtn.addEventListener('click', () => mobileMenu.classList.remove('active'));
-    
+
     document.querySelectorAll('.mobile-menu a').forEach(link => {
         link.addEventListener('click', () => mobileMenu.classList.remove('active'));
     });
@@ -91,29 +120,26 @@ if(menuBtn && closeMenuBtn) {
 
 function renderProducts(category) {
     if(!productContainer) return;
-    
-    
+
     if(currentCategory === category && productContainer.children.length > 0) {
         return;
     }
     currentCategory = category;
-    
-    
+
     const fragment = document.createDocumentFragment();
-    
-    const filtered = category === 'all' 
-        ? productsData 
-        : productsData.filter(p => p.category === category);
+
+    const filtered = category === 'all'
+        ? allProducts
+        : allProducts.filter(p => p.category === category);
 
     filtered.forEach(product => {
         const inCartItem = cart.find(item => item.id === product.id);
-        const btnText = inCartItem ? `În Coș (${inCartItem.qty}) +` : "Adaugă în coș";
+        const btnText = inCartItem ? `${t('in_cart')} (${inCartItem.qty}) +` : t('add_to_cart');
         const btnClass = inCartItem ? "add-btn in-cart" : "add-btn";
 
         const card = document.createElement('div');
         card.classList.add('card');
-        
-        
+
         card.innerHTML = `
             <div class="card-img-wrapper" onclick="openModal(${product.id})">
                 <img src="${product.image}" alt="${product.name}" loading="lazy" decoding="async">
@@ -128,17 +154,15 @@ function renderProducts(category) {
                 </div>
             </div>
         `;
-        
+
         fragment.appendChild(card);
     });
-    
-    
+
     productContainer.innerHTML = '';
     productContainer.appendChild(fragment);
 
     setupScrollAnimations();
 }
-
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -148,44 +172,40 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// Modal logic
 function openModal(id) {
-    const product = productsData.find(p => p.id === id);
+    const product = allProducts.find(p => p.id === id);
     if(!product || !modal) return;
 
     modalImg.src = product.image;
     modalImg.alt = product.name;
     modalTitle.innerText = product.name;
     modalPrice.innerText = product.price + " MDL";
-    
-    modalFamily.innerHTML = `<strong>Familie:</strong> ${product.family || 'Nespecificat'}`;
-    modalDesc.innerHTML = `<strong>Descriere:</strong> ${product.desc}`;
-    modalCare.innerHTML = `<strong>Îngrijire:</strong> ${product.care || 'Udare moderată.'}`;
-    modalNote.innerHTML = `<em>Nota: ${product.note || '-'}</em>`;
-    
+
+    modalFamily.innerHTML = `<strong>${t('modal_family')}</strong> ${product.family || '—'}`;
+    modalDesc.innerHTML = `<strong>${t('modal_desc')}</strong> ${product.desc}`;
+    modalCare.innerHTML = `<strong>${t('modal_care')}</strong> ${product.care || '—'}`;
+    modalNote.innerHTML = `<em>${t('modal_note')} ${product.note || '—'}</em>`;
+
     const existing3dBtn = document.querySelector('.btn-3d');
     if(existing3dBtn) existing3dBtn.remove();
-
 
     if (product.model3d) {
         const btn3d = document.createElement('button');
         btn3d.className = 'btn-3d';
-        btn3d.innerHTML = `Vezi în 3D (360°)`;
+        btn3d.innerHTML = t('modal_3d');
         btn3d.onclick = () => open3DModal(product.model3d);
         document.querySelector('.modal-text-block')?.appendChild(btn3d);
     }
 
-    // Update cart button text
     const inCartItem = cart.find(item => item.id === product.id);
-    modalAddBtn.innerText = inCartItem ? `Mai adaugă unu (${inCartItem.qty})` : "Adaugă în coș";
-    
+    modalAddBtn.innerText = inCartItem ? `${t('modal_add_more')} (${inCartItem.qty})` : t('modal_add');
+
     modalAddBtn.onclick = () => {
         addToCart(id);
         closeModal();
     };
 
     modal.classList.add('active');
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
 }
 
@@ -195,80 +215,128 @@ function closeModal() {
     document.body.style.overflow = '';
 }
 
-// 3d Logic
-function open3DModal(modelPath) {
-    if(!modal3D || !modelViewer || isModalTransitioning) return;
-    
-    isModalTransitioning = true;
-    const modelWrapper = document.querySelector('.model-wrapper');
-    
-    // Cleanup complet
+function resetViewer() {
     modelViewer.classList.remove('loaded');
     modelViewer.removeAttribute('src');
     modelViewer.removeAttribute('alt');
     modelViewer.removeAttribute('ios-src');
-    modelViewer.src = '';
-    
-    if(modelViewer.model) {
-        modelViewer.model = null;
+    try { modelViewer.src = ''; } catch (_) {}
+}
+
+function aplicaCalitate() {
+    if (DISPOZITIV_SLAB) {
+        modelViewer.setAttribute('shadow-intensity', '0');
+        modelViewer.removeAttribute('auto-rotate');
+        modelViewer.setAttribute('interaction-prompt', 'none');
+    } else if (PE_MOBIL) {
+        modelViewer.setAttribute('shadow-intensity', '0.5');
+        modelViewer.setAttribute('auto-rotate', '');
+        modelViewer.setAttribute('interaction-prompt', 'none');
+        modelViewer.setAttribute('auto-rotate-delay', '1000');
+    } else {
+        modelViewer.setAttribute('shadow-intensity', '1.5');
+        modelViewer.setAttribute('shadow-softness', '0.8');
+        modelViewer.setAttribute('auto-rotate', '');
+        modelViewer.setAttribute('auto-rotate-delay', '500');
+        modelViewer.setAttribute('rotation-per-second', '20deg');
+        modelViewer.setAttribute('interaction-prompt', 'none');
+        modelViewer.setAttribute('environment-image', 'neutral');
+        modelViewer.setAttribute('exposure', '1.1');
+        modelViewer.setAttribute('tone-mapping', 'commerce');
+        modelViewer.setAttribute('camera-orbit', '0deg 75deg 105%');
+        modelViewer.setAttribute('min-camera-orbit', 'auto 0deg auto');
+        modelViewer.setAttribute('max-camera-orbit', 'auto 180deg auto');
     }
-    
-    // Delay pentru cleanup WebGL
-    setTimeout(() => {
-        modelWrapper?.classList.add('loading');
-        
-        modal3D.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        
-        requestAnimationFrame(() => {
-            modal3D.classList.add('active');
-            
-            setTimeout(() => {
-                modelViewer.setAttribute('src', modelPath);
-                modelViewer.setAttribute('alt', '3D Flower Model');
-                
-                const onLoad = () => {
+}
+
+async function esteInCache(url) {
+    if (!('caches' in window)) return false;
+    try {
+        const cache = await caches.open(CACHE_MODELE);
+        return !!(await cache.match(url));
+    } catch (_) { return false; }
+}
+
+function open3DModal(modelPath) {
+    if (!modal3D || !modelViewer || isModalTransitioning) return;
+
+    isModalTransitioning = true;
+    const modelWrapper = document.querySelector('.model-wrapper');
+
+    resetViewer();
+    aplicaCalitate();
+
+    modal3D.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    requestAnimationFrame(() => {
+        modal3D.classList.add('active');
+
+        let incarcatTimeout;
+        let incercari = 0;
+
+        function incarcaModel() {
+            modelViewer.setAttribute('src', modelPath);
+            modelViewer.setAttribute('alt', '3D Flower');
+
+            const limitaMs = DISPOZITIV_SLAB ? 12000 : PE_MOBIL ? 8000 : 5000;
+
+            incarcatTimeout = setTimeout(() => {
+                incercari++;
+                if (incercari <= 2) {
+                    modelViewer.removeAttribute('src');
+                    setTimeout(incarcaModel, 300);
+                } else {
                     modelWrapper?.classList.remove('loading');
                     modelViewer.classList.add('loaded');
                     isModalTransitioning = false;
-                };
-                
-                modelViewer.addEventListener('load', onLoad, { once: true });
-                
-                setTimeout(() => {
-                    if(isModalTransitioning) {
-                        modelWrapper?.classList.remove('loading');
-                        modelViewer.classList.add('loaded');
-                        isModalTransitioning = false;
-                    }
-                }, 3000);
-            }, 200);
+                }
+            }, limitaMs);
+        }
+
+        esteInCache(modelPath).then(cached => {
+            if (cached) {
+                modelWrapper?.classList.remove('loading');
+            } else {
+                modelWrapper?.classList.add('loading');
+            }
         });
-    }, 100);
+
+        modelViewer.addEventListener('load', () => {
+            clearTimeout(incarcatTimeout);
+            modelWrapper?.classList.remove('loading');
+            modelViewer.classList.add('loaded');
+            isModalTransitioning = false;
+            if (!PE_MOBIL) cacheazaModel(modelPath);
+        }, { once: true });
+
+        modelViewer.addEventListener('error', () => {
+            clearTimeout(incarcatTimeout);
+            incercari++;
+            if (incercari <= 2) {
+                modelViewer.removeAttribute('src');
+                setTimeout(incarcaModel, 500);
+            } else {
+                modelWrapper?.classList.remove('loading');
+                isModalTransitioning = false;
+            }
+        }, { once: true });
+
+        incarcaModel();
+    });
 }
 
 function close3DModal() {
-    if(!modal3D || !modelViewer) return;
-    
+    if (!modal3D || !modelViewer) return;
+
     const modelWrapper = document.querySelector('.model-wrapper');
-    
     modal3D.classList.remove('active');
-    
+
     setTimeout(() => {
         modal3D.style.display = 'none';
         document.body.style.overflow = '';
-        
         modelWrapper?.classList.remove('loading');
-        modelViewer.classList.remove('loaded');
-        modelViewer.removeAttribute('src');
-        modelViewer.removeAttribute('alt');
-        modelViewer.removeAttribute('ios-src');
-        modelViewer.src = '';
-        
-        if(modelViewer.model) {
-            modelViewer.model = null;
-        }
-        
+        resetViewer();
         isModalTransitioning = false;
     }, 300);
 }
@@ -276,7 +344,6 @@ function close3DModal() {
 if(modalClose) modalClose.addEventListener('click', closeModal);
 if(close3D) close3D.addEventListener('click', close3DModal);
 
-// Click outside modal to close
 if(modal) {
     modal.addEventListener('click', (e) => {
         if(e.target === modal) closeModal();
@@ -288,7 +355,6 @@ if(modal3D) {
     });
 }
 
-// ESC key to close modals
 document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') {
         if(modal?.classList.contains('active')) closeModal();
@@ -296,19 +362,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// CART LOGIC 
 function addToCart(id) {
-    const product = productsData.find(p => p.id === id);
+    const product = allProducts.find(p => p.id === id);
     if(!product) return;
-    
+
     const existingItem = cart.find(item => item.id === id);
 
     if (existingItem) {
         existingItem.qty++;
-        showNotification(`Ai mai pus o ${product.name}! (${existingItem.qty})`);
+        showNotification(t('notif_more', { name: product.name, qty: existingItem.qty }));
     } else {
         cart.push({ ...product, qty: 1 });
-        showNotification(`Am adăugat "${product.name}" în coș!`);
+        showNotification(t('notif_added', { name: product.name }));
     }
 
     saveCart();
@@ -318,7 +383,7 @@ function addToCart(id) {
 
 function decreaseQty(id) {
     const existingItem = cart.find(item => item.id === id);
-    
+
     if (existingItem) {
         existingItem.qty--;
         if (existingItem.qty <= 0) {
@@ -326,7 +391,7 @@ function decreaseQty(id) {
             return;
         }
     }
-    
+
     saveCart();
     updateCartUI();
     refreshProductButtons();
@@ -337,23 +402,22 @@ function removeFromCart(id) {
     saveCart();
     updateCartUI();
     refreshProductButtons();
-    showNotification("Produs eliminat din coș");
+    showNotification(t('notif_removed'));
 }
 
-// Only update buttons that need updating
 function refreshProductButtons() {
     if(!productContainer) return;
-    
-    productsData.forEach(product => {
+
+    allProducts.forEach(product => {
         const btn = document.getElementById(`btn-${product.id}`);
         if(!btn) return;
-        
+
         const inCartItem = cart.find(item => item.id === product.id);
         if(inCartItem) {
-            btn.innerText = `În Coș (${inCartItem.qty}) +`;
+            btn.innerText = `${t('in_cart')} (${inCartItem.qty}) +`;
             btn.classList.add('in-cart');
         } else {
-            btn.innerText = "Adaugă în coș";
+            btn.innerText = t('add_to_cart');
             btn.classList.remove('in-cart');
         }
     });
@@ -363,25 +427,23 @@ function saveCart() {
     try {
         localStorage.setItem('flowerCart', JSON.stringify(cart));
     } catch(e) {
-        console.error('Failed to save cart:', e);
-        showNotification("Eroare la salvarea coșului");
+        showNotification(t('notif_cart_err'));
     }
 }
 
 function updateCartUI() {
     if(!cartItemsContainer) return;
-    
+
     let total = 0;
     let count = 0;
 
     if(cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Coșul este gol.</p>';
+        cartItemsContainer.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-muted);">${t('cart_empty')}</p>`;
         if(cartTotalEl) cartTotalEl.innerText = "0 MDL";
         if(cartCountEl) cartCountEl.innerText = "0";
         return;
     }
 
-    // Use DocumentFragment for better performance
     const fragment = document.createDocumentFragment();
 
     cart.forEach(item => {
@@ -391,17 +453,17 @@ function updateCartUI() {
         const itemEl = document.createElement('div');
         itemEl.classList.add('cart-item');
         itemEl.innerHTML = `
-            <img src="${item.image}" alt="${item.name}" loading="lazy">
+            <img src="${item.image}" alt="${item.name}" width="60" height="60" loading="lazy" decoding="async">
             <div style="flex:1;">
                 <h4>${item.name}</h4>
                 <div class="qty-controls">
-                    <button class="qty-btn" onclick="decreaseQty(${item.id})" aria-label="Scade cantitatea">-</button>
+                    <button type="button" class="qty-btn" onclick="decreaseQty(${item.id})" aria-label="Scade cantitatea">-</button>
                     <span>${item.qty} buc</span>
-                    <button class="qty-btn" onclick="addToCart(${item.id})" aria-label="Crește cantitatea">+</button>
+                    <button type="button" class="qty-btn" onclick="addToCart(${item.id})" aria-label="Creste cantitatea">+</button>
                 </div>
                 <p style="font-size:0.9rem; margin-top:5px; color:#666;">${item.price * item.qty} MDL</p>
             </div>
-            <button onclick="removeFromCart(${item.id})" class="remove-btn" aria-label="Elimină din coș">&times;</button>
+            <button type="button" onclick="removeFromCart(${item.id})" class="remove-btn" aria-label="Elimina din cos">&times;</button>
         `;
         fragment.appendChild(itemEl);
     });
@@ -416,23 +478,24 @@ function updateCartUI() {
 if(cartBtn) cartBtn.addEventListener('click', () => {
     cartDrawer?.classList.add('active');
     cartOverlay?.classList.add('active');
+    document.body.classList.add('cart-open');
     document.body.style.overflow = 'hidden';
 });
 
 function closeCartDrawer() {
     cartDrawer?.classList.remove('active');
     cartOverlay?.classList.remove('active');
+    document.body.classList.remove('cart-open');
     document.body.style.overflow = '';
 }
 
 if(closeCartBtn) closeCartBtn.addEventListener('click', closeCartDrawer);
 if(cartOverlay) cartOverlay.addEventListener('click', closeCartDrawer);
 
-// Checkout Redirect
 if(checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
         if (cart.length === 0) {
-            showNotification("Coșul este gol! Adaugă ceva frumos.");
+            showNotification(t('notif_empty'));
         } else {
             window.location.href = '/checkout';
         }
@@ -454,10 +517,10 @@ function displayNextToast() {
         isShowingToast = false;
         return;
     }
-    
+
     isShowingToast = true;
     const message = toastQueue.shift();
-    
+
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerText = message;
@@ -479,11 +542,10 @@ function displayNextToast() {
 let scrollObserver = null;
 
 function setupScrollAnimations() {
-    // Disconnect old observer to prevent memory leaks
     if(scrollObserver) {
         scrollObserver.disconnect();
     }
-    
+
     scrollObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -491,12 +553,19 @@ function setupScrollAnimations() {
                 scrollObserver.unobserve(entry.target);
             }
         });
-    }, { 
+    }, {
         threshold: 0.1,
-        rootMargin: '50px' 
+        rootMargin: '50px'
     });
 
     document.querySelectorAll('.card').forEach(card => {
         scrollObserver.observe(card);
     });
 }
+
+window.onLangChange = function() {
+    const cat = currentCategory;
+    currentCategory = null;
+    renderProducts(cat);
+    updateCartUI();
+};
