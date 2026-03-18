@@ -159,8 +159,8 @@
             const name    = sanitizeText(document.getElementById('contactName').value, 80);
             const message = sanitizeText(msgArea.value, 1000);
 
-            if (name.length < 2)    return showFeedback('error', t('notif_cart_err'));
-            if (message.length < 5) return showFeedback('error', t('notif_cart_err'));
+            if (name.length < 2)    return showFeedback('error', 'Numele trebuie să conțină cel puțin 2 caractere.');
+            if (message.length < 5) return showFeedback('error', 'Mesajul este prea scurt.');
 
             const btn = document.getElementById('submitBtn');
             btn.disabled    = true;
@@ -176,15 +176,16 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    showFeedback('success', data.message || t('notif_added', { name }));
+                    // Am inlocuit notif_added cu un mesaj corect de contact
+                    showFeedback('success', data.message || 'Mesajul a fost trimis cu succes! Vă vom contacta în curând.');
                     document.getElementById('contactForm').reset();
                     msgCount.textContent = '0 / 1000';
                     msgCount.className   = 'char-count';
                 } else {
-                    showFeedback('error', data.error || t('notif_cart_err'));
+                    showFeedback('error', data.error || 'Mesajul nu s-a putut trimite :( incercati din nou mai tarziu');
                 }
             } catch {
-                showFeedback('error', t('notif_cart_err'));
+                showFeedback('error', 'error');
             } finally {
                 btn.disabled    = false;
                 btn.textContent = t('btn_send');
