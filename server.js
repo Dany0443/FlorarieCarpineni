@@ -103,7 +103,12 @@ function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
 // protejam rutele daca nu i administrator
 function requireAdmin(req, res, next) {
-    const token = req.headers['x-admin-token'];
+    // Permitem si formatul x-admin-token si formatul Authorization Bearer
+    let token = req.headers['x-admin-token'];
+    if (!token && req.headers['authorization']) {
+        token = req.headers['authorization'].split(' ')[1];
+    }
+
     if (!token || !sessions.has(token)) {
         return res.status(401).json({ success: false, error: 'Unauthorized.' });
     }
@@ -221,7 +226,12 @@ app.post('/api/admin/login', (req, res) => {
 
 
 app.post('/api/admin/logout', requireAdmin, (req, res) => {
-    sessions.delete(req.headers['x-admin-token']);
+    let token = req.headers['x-admin-token'];
+    if (!token && req.headers['authorization']) {
+        token = req.headers['authorization'].split(' ')[1];
+    }
+    
+    sessions.delete(token);
     log('INFO', 'Admin delogat');
     res.json({ success: true });
 });

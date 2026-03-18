@@ -8,6 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
         a.info-card {
             text-decoration: none;
             color: inherit;
@@ -47,6 +54,14 @@
         .char-count.warn { color: #cc6600; }
         .char-count.over { color: #aa0132; }
         .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        footer {
+            background: var(--footer-bg);
+            color: var(--footer-text);
+            text-align: center;
+            padding: 2rem;
+            margin-top: auto;
+            transition: var(--transition-theme);
+        }
     </style>
 </head>
 <body>

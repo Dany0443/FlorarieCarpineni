@@ -2,20 +2,10 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Admin — Luci Boutique</title>
 <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script>
-let tokencheck = localStorage.getItem('adminToken');
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (tokencheck) {
-        showAdmin(); 
-        loadDashboard(); 
-    } else {
-        showLoginScreen();
-    }
-});</script>
 <style>
 :root {
   --p:        #aa0132;
@@ -614,22 +604,30 @@ tr:hover td { background:#fdfbfa; }
 <div class="toast" id="toast"></div>
 
 <script>
-let token = sessionStorage.getItem('adminToken');
 let allProducts = [];
 
-// verificare rapida la incarcare - daca nu exista token, ramane pe login
-if (token) {
-    fetch('/api/admin/orders', { headers: { 'x-admin-token': token } })
-        .then(r => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('adminToken');
+
+    if (token) {
+        try {
+            const r = await fetch('/api/admin/orders', { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            
             if (r.status === 401) {
-                sessionStorage.removeItem('adminToken');
-                token = null;
+                localStorage.removeItem('adminToken');
+                showLoginScreen();
             } else {
                 showAdmin();
             }
-        })
-        .catch(() => {});
-}
+        } catch (e) {
+            showLoginScreen(); 
+        }
+    } else {
+        showLoginScreen();
+    }
+});
 
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -689,7 +687,7 @@ async function doLogin() {
     if (d.success) { 
       localStorage.setItem('adminToken', d.token); 
       token = d.token; 
-      showAdmin(); 
+      location.reload(); 
     } else { 
       errEl.textContent = d.error || 'Eroare.'; 
       errEl.style.display = 'block'; 
@@ -712,6 +710,12 @@ function showAdmin() {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('admin-screen').classList.add('visible');
   loadDashboard(); loadProducts();
+}
+
+function showLoginScreen() {
+  document.getElementById('admin-screen').classList.remove('visible');
+  document.getElementById('admin-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex'; // Use 'block' if your CSS prefers it
 }
 
 function navigate(page) {
@@ -858,7 +862,7 @@ document.getElementById('add-btn').addEventListener('click', async ()=>{
     let imagePath='';
     if (uploadedFile) {
       const fd=new FormData(); fd.append('image',uploadedFile);
-      const up=await fetch('/api/admin/upload',{method:'POST',headers:{'x-admin-token':token},body:fd}).then(r=>r.json());
+      const up=await fetch('/api/admin/upload',{method:'POST',headers:{'Authorization': `Bearer ${localStorage.getItem('adminToken')}`},body:fd}).then(r=>r.json());
       if (up.success){imagePath=up.path;}else{toast('Eroare upload: '+up.error,'error');btn.textContent='Adaugă în catalog';btn.disabled=false;return;}
     }
     const d=await api('/api/admin/products',{method:'POST',body:JSON.stringify({
@@ -926,7 +930,7 @@ document.getElementById('e-save').addEventListener('click', async ()=>{
     let imagePath;
     if (editFile) {
       const fd=new FormData(); fd.append('image',editFile);
-      const up=await fetch('/api/admin/upload',{method:'POST',headers:{'x-admin-token':token},body:fd}).then(r=>r.json());
+      const up=await fetch('/api/admin/upload',{method:'POST',headers:{'Authorization': `Bearer ${localStorage.getItem('adminToken')}`},body:fd}).then(r=>r.json());
       if (up.success){imagePath=up.path;}else{toast('Eroare upload: '+up.error,'error');btn.textContent='Salvează';btn.disabled=false;return;}
     }
     const payload={
