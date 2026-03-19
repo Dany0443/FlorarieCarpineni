@@ -1,54 +1,58 @@
-# Luci Boutique - Website Florărie
+# Luci Boutique
 
-Bun venit pe repository-ul proiectului nostru.
-Acesta este Luci Boutique, un site web funcțional pentru o florărie modernă, dezvoltat de Alexandru și Daniel pentru concursul Tekwill Junior.
+Site web pentru o florărie modernă, construit de Alexandru și Dan pentru concursul **Tekwill Junior Ambassadors**.
 
-Am construit o experiență interactivă unde arta florală întâlnește tehnologia, demonstrând că un magazin online poate fi rapid, elegant și ușor de utilizat fără a depinde de framework-uri complexe.
+Vanilla JS, fără frameworks.
 
-## Despre Proiect
+---
 
-Scopul nostru a fost să creăm o platformă care nu doar arată bine, ci oferă și o experiență de utilizare fluidă.
+## Ce face
 
-Site-ul permite clienților să:
+- Colecție de flori cu filtrare pe categorii
+- Vizualizare 3D la 360° (Google Model Viewer) pentru produse selectate
+- Coș de cumpărături persistent (localStorage)
+- Comandă directă cu notificare prin email
+- Suport multilingv — română, engleză, rusă
+- Temă light/dark
+- PWA-ready — se poate instala ca aplicație pe telefon
+- Pagină de contact cu formular
+- **Panou de administrare** — gestionare produse, vizualizare comenzi în timp real
 
-* Exploreze o colecție diversă de flori.
+---
 
-* Vizualizeze produsele în detaliu, inclusiv prin modele 3D interactive.
+## Stack
 
-* Adauge produse în coș și să trimită comanda direct către florărie.
+| Layer | Tehnologie |
+|---|---|
+| Frontend | HTML5, CSS3, Vanilla JS |
+| Backend | Node.js + Express |
+| Email | Nodemailer |
+| 3D | Google Model Viewer (GLB) |
+| Auth admin | Session-based, server-side |
 
-## Funcționalități Principale
+---
 
-* **Design Modern:** Interfață curată cu efecte vizuale plăcute și animații fluide.
+## Rulare locală
 
-* **Vizualizare 3D:** Integrare Google Model Viewer pentru a permite rotirea și analizarea produselor la 360 de grade.
+```bash
+npm install
+node server.js
+```
 
-* **Coș de Cumpărături:** Sistem complet funcțional care salvează selecția utilizatorului chiar și după reîmprospătarea paginii.
+Deschide `http://localhost:3000`
 
-* **Adaptabilitate:** Site-ul este complet responsiv, funcționând perfect pe mobil, tabletă și desktop.
+Panoul admin e la `/adminpan.html` — credențialele se setează în variabilele env.
 
-* **Backend Node.js:** Un server eficient care gestionează procesarea comenzilor și trimiterea notificărilor prin email.
+---
 
-## Tehnologii Utilizate
+## Echipă
 
-Am optat pentru tehnologii standard:
+Alexandru — [@Sans992](https://github.com/Sans992) / [@WJTMainDev](https://t.me/WJTMainDev)
 
-* **Frontend:** HTML5, CSS3, JavaScript.
+Daniel — [@Dany0443](https://github.com/Dany0443) / [@Dany0443](https://t.me/Dany0443)
 
-* **Backend:** Node.js cu Express.
-
-* **Email:** Nodemailer pentru sistemul de comenzi.
-
-* **3D:** componenta model-viewer pentru randarea fișierelor GLB.
-
-## Echipa
-
-Proiect realizat de:
-([@Sans992](https://github.com/Sans992)) : ([@Dany0443](https://github.com/Dany0443))
-
-Contact Telegram: [@Alexandru](https://t.me/WJTMainDev) / [@Dan](https://t.me/Dany0443)
-
+---
 
 ## Licență
 
-Acest proiect este Open Source în scop educațional, creat pentru evaluare în cadrul competiției. Imaginile și modelele 3D sunt folosite cu titlu demonstrativ.
+Open source în scop educațional. Imaginile și modelele 3D sunt folosite demonstrativ.
