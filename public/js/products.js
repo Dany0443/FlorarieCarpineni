@@ -113,7 +113,7 @@ const productsData = [
         desc: "Una dintre cele mai populare plante de apartament — înflorire lungă, culori vii și îngrijire minimă. Perfectă pentru orice cameră.",
         care: "Lumină multă, udare rară lasă pământul să se usuce complet între udări.",
         note: "Rezistentă și robustă, ideală pentru începători.",
-        model3d: "models/KalanchoeModel.glb",
+        model3d: "models/Kalanchoe3dModel.glb",
         listed: false
     },
     {
@@ -126,7 +126,7 @@ const productsData = [
         desc: "Floarea mireaselor. Parfumul ei dulce și florile albe ca neaua o fac alegerea perfectă pentru ocazii speciale și cadouri rafinate.",
         care: "Lumină indirectă puternică, umiditate constantă, temperaturi stabile.",
         note: "Sensibilă la curenți de aer și schimbări bruște de temperatură.",
-        model3d: "models/StephanotisModel.glb",
+        model3d: "models/Stephanotis3dModel.glb",
         listed: false
     },
     {
@@ -139,7 +139,7 @@ const productsData = [
         desc: "Exotică și fără sol crește în aer liber. Spicul roz aprins cu flori violet este unul dintre cele mai spectaculoase din lumea plantelor.",
         care: "Pulverizare de 2-3 ori pe săptămână, fără sol, fixată pe suport sau scoarță.",
         note: "Plantă epifită nu are nevoie de ghiveci cu pământ.",
-        model3d: "models/TillandsiaModel.glb",
+        model3d: "models/Tillandsia3dModel.glb",
         listed: false
     },
     {
@@ -152,7 +152,7 @@ const productsData = [
         desc: "Planta de indestructibilă supraviețuiește în orice condiții. Frunzele lucioase de un verde intens aduc eleganță oricărui spațiu.",
         care: "Tolerează lumină redusă și udare rară. Udă o dată la 2-3 săptămâni.",
         note: "Una dintre puținele plante care rezistă și la întuneric total.",
-        model3d: "models/ZamioculcasModel.glb",
+        model3d: "models/Zamioculcas3dModel.glb",
         listed: false
     }
 ];
