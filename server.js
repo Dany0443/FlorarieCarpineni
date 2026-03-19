@@ -521,7 +521,7 @@ async function shutdown(signal) {
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const server = app.listen(PORT, () => {
     log('INFO', `Server pornit pe portul ${PORT}`);
-    console.log(`Server → http://localhost:${PORT}`);
+    console.log(`Server => http://localhost:${PORT}`);
 });
 
 process.on('SIGINT',  () => shutdown('SIGINT'));
