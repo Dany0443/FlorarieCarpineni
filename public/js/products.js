@@ -66,19 +66,6 @@ const productsData = [
     },
     {
         id: 6,
-        name: "White Calla Lily",
-        category: "Elegant",
-        price: 180,
-        image: "assets/whitelil.avif",
-        family: "Araceae",
-        desc: "Plantă perenă cu frunze verzi lucioase și floare albă în formă de pâlnie.",
-        care: "Lumină puternică indirectă, sol bine drenat și udat regulat, umiditate moderată.",
-        note: "Înflorește primăvara–vara, părți ușor toxice dacă sunt ingerate.",
-        model3d: null,
-        listed: false
-    },
-    {
-        id: 7,
         name: "Crocus mix",
         category: "Classic",
         price: 75,
@@ -91,20 +78,7 @@ const productsData = [
         listed: true
     },
     {
-        id: 8,
-        name: "Lilium Or mix",
-        category: "mix",
-        price: 75,
-        image: "assets/lm.avif",
-        family: "Liliaceae",
-        desc: "Lilium Mix este un amestec de crini cu flori mari și parfumate, de diverse culori.",
-        care: "Preferă lumină indirectă și umiditate moderată.",
-        note: "Ideală pentru decorarea interioarelor datorită aspectului său exotic și întreținerii ușoare.",
-        model3d: null,
-        listed: false
-    },
-    {
-        id: 9,
+        id: 7,
         name: "Kalanchoe",
         category: "Classic",
         price: 90,
@@ -117,7 +91,7 @@ const productsData = [
         listed: true
     },
     {
-        id: 10,
+        id: 8,
         name: "Stephanotis Floribunda",
         category: "Elegant",
         price: 210,
@@ -130,7 +104,7 @@ const productsData = [
         listed: true
     },
     {
-        id: 11,
+        id: 9,
         name: "Tillandsia Cyanea",
         category: "Exotic",
         price: 160,
@@ -143,7 +117,7 @@ const productsData = [
         listed: true
     },
     {
-        id: 12,
+        id: 10,
         name: "Zamioculcas Zamiifolia",
         category: "Classic",
         price: 200,
@@ -154,5 +128,31 @@ const productsData = [
         note: "Una dintre puținele plante care rezistă și la întuneric total.",
         model3d: "models/Zamioculcas3dModel.glb",
         listed: true
-    }
+    },
+    {
+        id: 11,
+        name: "White Calla Lily",
+        category: "Elegant",
+        price: 180,
+        image: "assets/whitelil.avif",
+        family: "Araceae",
+        desc: "Plantă perenă cu frunze verzi lucioase și floare albă în formă de pâlnie.",
+        care: "Lumină puternică indirectă, sol bine drenat și udat regulat, umiditate moderată.",
+        note: "Înflorește primăvara–vara, părți ușor toxice dacă sunt ingerate.",
+        model3d: null,
+        listed: false
+    },
+    {
+        id: 12,
+        name: "Lilium Or mix",
+        category: "mix",
+        price: 75,
+        image: "assets/lm.avif",
+        family: "Liliaceae",
+        desc: "Lilium Mix este un amestec de crini cu flori mari și parfumate, de diverse culori.",
+        care: "Preferă lumină indirectă și umiditate moderată.",
+        note: "Ideală pentru decorarea interioarelor datorită aspectului său exotic și întreținerii ușoare.",
+        model3d: null,
+        listed: false
+    },
 ];
