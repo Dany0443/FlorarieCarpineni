@@ -1,0 +1,51 @@
+.form-container { flex: 1; }
+        .page-title {
+            text-align: center;
+            font-family: var(--font-heading);
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            color: var(--text-main);
+        }
+        .order-summary {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition-theme);
+        }
+        .order-summary h3 { color: var(--text-main); }
+        .order-summary .total-amount { color: var(--primary); }
+        .order-summary .payment-note {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .checkout-form-box {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: var(--transition-theme);
+        }
+        .form-feedback {
+            display: none;
+            margin-top: 1rem;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-family: var(--font-body, Montserrat, sans-serif);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .form-feedback.success { background: #e6f4ea; color: #2d7a3a; border: 1px solid #a8d5b0; }
+        .form-feedback.error   { background: #fdecea; color: #aa0132; border: 1px solid #f5c2c7; }
+        .order-id { font-weight: 600; letter-spacing: 0.03em; }
+        .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .nav-back-link {
+            text-decoration: none;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            transition: color 0.2s;
+        }
+        .nav-back-link:hover { color: var(--primary); }
+        .submit-btn-full { width: 100%; border: none; }

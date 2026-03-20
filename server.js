@@ -1,5 +1,5 @@
 // rewrite the entire server.js V4 speram ca de data asta merge cum trebu
-// patch 4.3
+// patch 4.4
 
 require('dotenv').config();
 
@@ -12,10 +12,8 @@ const fs         = require('fs');
 const crypto     = require('crypto');
 const readline   = require('readline');
 const multer     = require('multer');
-
 const app  = express();
 const PORT = process.env.PORT || 3000;
-
 const DIR_DATA      = path.join(__dirname, 'data');
 const DIR_PUBLIC    = path.join(__dirname, 'public');
 const DIR_UPLOADS   = path.join(DIR_PUBLIC, 'uploads');
@@ -96,6 +94,7 @@ const mailer = nodemailer.createTransport({
     auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
+// trebuie sa fie pe enviroment usr si pass.
 const ADMIN_USER      = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS      = process.env.ADMIN_PASS || 'admin1132';
 const sessions        = new Map();
@@ -146,6 +145,7 @@ function checkBrute(ip) {
     return { ok: true };
 }
 
+// cooldown la pagina de contact ca sa oprim spamul 
 function checkContactCooldown(ip) {
     const now  = Date.now();
     const last = contactCooldown.get(ip) || 0;
@@ -161,6 +161,7 @@ setInterval(() => {
     for (const [ip, t] of contactCooldown) if (now - t > 10 * 60 * 1000)            contactCooldown.delete(ip);
 }, 10 * 60 * 1000);
 
+// folosesc modulul multer pentru a incarca imagini 
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => cb(null, DIR_UPLOADS),
@@ -187,6 +188,9 @@ app.use(express.static(DIR_PUBLIC, {
     }
 }));
 
+
+// niste rute pentru serving, dar nu avem nevoie de astea daca suntem pe nginx
+// sunt aici pentru developement
 app.get('/',         (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'index.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'checkout.html')));
 app.get('/contact',  (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'contact.html')));
@@ -196,6 +200,8 @@ app.get('/adminpan', (req, res) => {
     res.sendFile(path.join(DIR_PUBLIC, 'adminpan.html'));
 });
 
+
+// api custom 
 app.get('/api/products', (req, res) => {
     try {
         const products = readProducts().filter(p => p.listed !== false);
@@ -207,6 +213,7 @@ app.get('/api/products', (req, res) => {
     }
 });
 
+// api pentru admin fiecare endpoint este verificat.
 app.post('/api/admin/login', (req, res) => {
     const ip = req.ip;
     const bf = checkBrute(ip);
@@ -392,6 +399,7 @@ app.post('/api/order', async (req, res) => {
 
     const total = parseFloat(cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2));
 
+    // formatam textele pentru comanda, send/receive.. confirmare
     const order = {
         id:        `ORD-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -498,12 +506,15 @@ app.post('/api/contact', async (req, res) => {
     }
 });
 
+// api end
+
 app.use((req, res) => res.status(404).json({ success: false, error: 'Not found.' }));
 
 app.use((err, req, res, next) => {
     log('ERROR', `Unhandled: ${err.message}`);
     res.status(500).json({ success: false, error: 'Eroare server.' });
 });
+
 
 async function shutdown(signal) {
     log('INFO', `Oprire: ${signal}`);
@@ -524,6 +535,7 @@ const server = app.listen(PORT, () => {
     console.log(`Server => http://localhost:${PORT}`);
 });
 
+// functie pentru ca sa citeasca consola si sa sa isi dea gracefull shutdown
 process.on('SIGINT',  () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('uncaughtException',  e => log('ERROR', `uncaughtException: ${e.message}`));

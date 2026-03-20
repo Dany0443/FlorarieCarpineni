@@ -7,62 +7,7 @@
     <link rel="icon" type="image/png" href="assets/favicon.svg">
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        html, body {
-            height: 100%;
-        }
-        body {
-            display: flex;
-            flex-direction: column;
-        }
-        a.info-card {
-            text-decoration: none;
-            color: inherit;
-            display: block;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        a.info-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        .form-feedback {
-            display: none;
-            margin-top: 1rem;
-            padding: 12px 16px;
-            border-radius: 8px;
-            text-align: center;
-            font-family: var(--font-body, Montserrat, sans-serif);
-            font-size: 0.95rem;
-        }
-        .form-feedback.success {
-            background: #e6f4ea;
-            color: #2d7a3a;
-            border: 1px solid #a8d5b0;
-        }
-        .form-feedback.error {
-            background: #fdecea;
-            color: #aa0132;
-            border: 1px solid #f5c2c7;
-        }
-        .char-count {
-            font-size: 0.78rem;
-            color: #999;
-            text-align: right;
-            margin-top: 4px;
-        }
-        .char-count.warn { color: #cc6600; }
-        .char-count.over { color: #aa0132; }
-        .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        footer {
-            background: var(--footer-bg);
-            color: var(--footer-text);
-            text-align: center;
-            padding: 2rem;
-            margin-top: auto;
-            transition: var(--transition-theme);
-        }
-    </style>
+    <link rel="stylesheet" href="css/contact.css">
 </head>
 <body>
 
@@ -76,28 +21,28 @@
             <div class="nav-links">
                 <a href="index.html" data-i18n="nav_home">Acasa</a>
                 <a href="index.html#shop" data-i18n="nav_collection">Colectie</a>
-                <a href="contact.html" style="color:var(--primary);" data-i18n="nav_contact">Contact</a>
+                <a href="contact.html" class="nav-active" data-i18n="nav_contact">Contact</a>
             </div>
             <div class="nav-icons mobile-only">
-                <a href="index.html" style="text-decoration:none; color:var(--text-main);" data-i18n="nav_back_short">Inapoi</a>
+                <a href="index.html" class="nav-back-link" data-i18n="nav_back_short">Inapoi</a>
             </div>
         </div>
     </nav>
 
     <div class="form-container">
-        <h1 style="text-align:center; font-family:var(--font-heading); margin-bottom:1rem; font-size:2.5rem;" data-i18n="contact_title">Contacteaza-ne</h1>
-        <p style="text-align:center; margin-bottom:3rem; color:#666;" data-i18n="contact_desc">
+        <h1 class="page-title" data-i18n="contact_title">Contacteaza-ne</h1>
+        <p class="page-desc" data-i18n="contact_desc">
             Ai intrebari? Suntem aici sa te ajutam cu orice detaliu despre flori.
         </p>
 
-        <div class="info-grid contact-info-grid" style="margin-bottom: 40px; gap: 1rem;">
-            <a href="tel:+37368167766" class="info-card" style="background:var(--bg-color); padding:30px 20px; border-radius:12px; text-align:center;">
+        <div class="info-grid contact-info-grid">
+            <a href="tel:+37368167766" class="info-card contact-card-link">
                 <h3 data-i18n="contact_phone">Telefon</h3>
-                <p style="font-size: 1.2rem; font-weight: 600; margin-top: 10px;">068 167 766</p>
+                <p class="contact-card-phone">068 167 766</p>
             </a>
-            <a href="https://maps.app.goo.gl/E5h2zuHgUVXVnXNB8" target="_blank" class="info-card" style="background:var(--bg-color); padding:30px 20px; border-radius:12px; text-align:center;">
+            <a href="https://maps.app.goo.gl/E5h2zuHgUVXVnXNB8" target="_blank" class="info-card contact-card-link">
                 <h3 data-i18n="contact_location">Locatie</h3>
-                <p style="font-size: 1.1rem; margin-top: 10px;" data-i18n="contact_location_val">Carpineni, Moldova</p>
+                <p class="contact-card-location" data-i18n="contact_location_val">Carpineni, Moldova</p>
             </a>
         </div>
 
@@ -111,7 +56,7 @@
                 <textarea id="contactMessage" rows="5" data-i18n-ph="ph_message" placeholder="Cu ce te putem ajuta?" maxlength="1000" required></textarea>
                 <div class="char-count" id="msgCount">0 / 1000</div>
             </div>
-            <button type="submit" id="submitBtn" class="cta-btn" style="width:100%;" data-i18n="btn_send">Trimite Mesaj</button>
+            <button type="submit" id="submitBtn" class="cta-btn submit-btn-full" data-i18n="btn_send">Trimite Mesaj</button>
             <div id="formFeedback" class="form-feedback"></div>
         </form>
     </div>
@@ -123,76 +68,6 @@
     <script src="js/i18n.js"></script>
     <script src="js/controls.js"></script>
     <script src="js/controls-swipe.js"></script>
-    <script>
-        window.addEventListener('load', () => {
-            document.getElementById('loader').classList.add('hidden');
-        });
-
-        function sanitizeText(str, maxLen) {
-            return String(str).trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, maxLen);
-        }
-
-        const msgArea  = document.getElementById('contactMessage');
-        const msgCount = document.getElementById('msgCount');
-
-        msgArea.addEventListener('input', () => {
-            const len = msgArea.value.length;
-            msgCount.textContent = `${len} / 1000`;
-            msgCount.className = 'char-count' + (len > 900 ? ' over' : len > 750 ? ' warn' : '');
-        });
-
-        function showFeedback(type, msg) {
-            const el = document.getElementById('formFeedback');
-            el.textContent   = msg;
-            el.className     = `form-feedback ${type}`;
-            el.style.display = 'block';
-        }
-        function hideFeedback() {
-            document.getElementById('formFeedback').style.display = 'none';
-        }
-
-        document.getElementById('contactForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const name    = sanitizeText(document.getElementById('contactName').value, 80);
-            const message = sanitizeText(msgArea.value, 1000);
-
-            if (name.length < 2)    return showFeedback('error', 'Numele trebuie să conțină cel puțin 2 caractere.');
-            if (message.length < 5) return showFeedback('error', 'Mesajul este prea scurt.');
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled    = true;
-            btn.textContent = t('btn_sending2');
-            hideFeedback();
-
-            try {
-                const res  = await fetch('/api/contact', {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ name, message })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    // Am inlocuit notif_added cu un mesaj corect de contact
-                    showFeedback('success', data.message || 'Mesajul a fost trimis cu succes! Vă vom contacta în curând.');
-                    document.getElementById('contactForm').reset();
-                    msgCount.textContent = '0 / 1000';
-                    msgCount.className   = 'char-count';
-                } else {
-                    showFeedback('error', data.error || 'Mesajul nu s-a putut trimite :( incercati din nou mai tarziu');
-                }
-            } catch {
-                showFeedback('error', 'error');
-            } finally {
-                btn.disabled    = false;
-                btn.textContent = t('btn_send');
-            }
-        });
-
-        window.onLangChange = function() {
-            document.getElementById('submitBtn').textContent = t('btn_send');
-        };
-    </script>
+    <script src="js/contact.js"></script>
 </body>
 </html>

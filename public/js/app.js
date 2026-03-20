@@ -1,5 +1,4 @@
 let preloadedModels = new Set();
-let isModalTransitioning = false;
 let allProducts = [];
 
 // setari minime daca e pe dispozitiv slab
@@ -69,6 +68,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if(productContainer) {
         renderProducts('all');
+    }
+
+    // Aggressively preload all product images via <link rel="preload"> tags.
+    // This hooks into the browser's native preload scanner so images are
+    // fetched immediately — before the user ever scrolls to them.
+    const imageUrls = allProducts.map(p => p.image).filter(Boolean);
+    imageUrls.forEach((url, i) => {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = url;
+        if (i < 4) link.setAttribute('fetchpriority', 'high');
+        document.head.appendChild(link);
+    });
+
+    // Also warm the service worker cache for offline/return visits
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            const sendPreload = (sw) => {
+                if (sw) sw.postMessage({ type: 'PRELOAD_IMAGES', urls: imageUrls });
+            };
+            if (navigator.serviceWorker.controller) {
+                sendPreload(navigator.serviceWorker.controller);
+            } else {
+                navigator.serviceWorker.ready.then(r => sendPreload(r.active));
+            }
+        }).catch(() => {});
     }
 
     updateCartUI();
@@ -226,7 +252,9 @@ function closeModal() {
 }
 
 function resetViewer() {
-    modelViewer.classList.remove('loaded');
+    modelViewer.style.transition = 'none';
+    modelViewer.style.opacity = '0';
+
     modelViewer.removeAttribute('src');
     modelViewer.removeAttribute('alt');
     modelViewer.removeAttribute('ios-src');
@@ -234,6 +262,9 @@ function resetViewer() {
 }
 
 function aplicaCalitate() {
+    // camera-controls must always be set — required for touch interaction on mobile
+    modelViewer.setAttribute('camera-controls', '');
+
     if (DISPOZITIV_SLAB) {
         modelViewer.setAttribute('shadow-intensity', '0');
         modelViewer.removeAttribute('auto-rotate');
@@ -268,72 +299,63 @@ async function esteInCache(url) {
 }
 
 function open3DModal(modelPath) {
-    if (!modal3D || !modelViewer || isModalTransitioning) return;
+    if (!modal3D || !modelViewer) return;
 
-    isModalTransitioning = true;
     const modelWrapper = document.querySelector('.model-wrapper');
 
     resetViewer();
     aplicaCalitate();
 
-    modal3D.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    modal3D.classList.add('active');
+    modelWrapper?.classList.add('loading');
 
-    requestAnimationFrame(() => {
-        modal3D.classList.add('active');
+    let attempts = 0;
+    let timeoutId;
 
-        let incarcatTimeout;
-        let incercari = 0;
+    function tryLoad() {
+        attempts++;
+        modelViewer.setAttribute('src', modelPath);
+        modelViewer.setAttribute('alt', '3D Flower');
 
-        function incarcaModel() {
-            modelViewer.setAttribute('src', modelPath);
-            modelViewer.setAttribute('alt', '3D Flower');
+        // Do NOT restore opacity here — keep it at 0 until load fires.
+        // Restoring early is what causes the old model to flash through.
 
-            const limitaMs = DISPOZITIV_SLAB ? 12000 : PE_MOBIL ? 8000 : 5000;
+        const limitaMs = DISPOZITIV_SLAB ? 15000 : PE_MOBIL ? 10000 : 6000;
 
-            incarcatTimeout = setTimeout(() => {
-                incercari++;
-                if (incercari <= 2) {
-                    modelViewer.removeAttribute('src');
-                    setTimeout(incarcaModel, 300);
-                } else {
-                    modelWrapper?.classList.remove('loading');
-                    modelViewer.classList.add('loaded');
-                    isModalTransitioning = false;
-                }
-            }, limitaMs);
-        }
-
-        esteInCache(modelPath).then(cached => {
-            if (cached) {
-                modelWrapper?.classList.remove('loading');
-            } else {
-                modelWrapper?.classList.add('loading');
-            }
-        });
-
-        modelViewer.addEventListener('load', () => {
-            clearTimeout(incarcatTimeout);
-            modelWrapper?.classList.remove('loading');
-            modelViewer.classList.add('loaded');
-            isModalTransitioning = false;
-            if (!PE_MOBIL) cacheazaModel(modelPath);
-        }, { once: true });
-
-        modelViewer.addEventListener('error', () => {
-            clearTimeout(incarcatTimeout);
-            incercari++;
-            if (incercari <= 2) {
+        timeoutId = setTimeout(() => {
+            if (attempts < 3) {
                 modelViewer.removeAttribute('src');
-                setTimeout(incarcaModel, 500);
+                setTimeout(tryLoad, 400);
             } else {
+                // Timed out after all retries — show whatever is there
+                modelViewer.style.transition = 'opacity 0.2s ease';
+                modelViewer.style.opacity = '1';
                 modelWrapper?.classList.remove('loading');
-                isModalTransitioning = false;
             }
-        }, { once: true });
+        }, limitaMs);
+    }
 
-        incarcaModel();
-    });
+    modelViewer.addEventListener('load', () => {
+        clearTimeout(timeoutId);
+        modelWrapper?.classList.remove('loading');
+        // Fade in only now — new model is fully rendered
+        modelViewer.style.transition = 'opacity 0.2s ease';
+        modelViewer.style.opacity = '1';
+        if (!PE_MOBIL) cacheazaModel(modelPath);
+    }, { once: true });
+
+    modelViewer.addEventListener('error', () => {
+        clearTimeout(timeoutId);
+        if (attempts < 3) {
+            modelViewer.removeAttribute('src');
+            setTimeout(tryLoad, 500);
+        } else {
+            modelWrapper?.classList.remove('loading');
+        }
+    }, { once: true });
+
+    tryLoad();
 }
 
 function close3DModal() {
@@ -343,11 +365,9 @@ function close3DModal() {
     modal3D.classList.remove('active');
 
     setTimeout(() => {
-        modal3D.style.display = 'none';
         document.body.style.overflow = '';
         modelWrapper?.classList.remove('loading');
         resetViewer();
-        isModalTransitioning = false;
     }, 300);
 }
 
@@ -564,24 +584,38 @@ function displayNextToast() {
 let scrollObserver = null;
 
 function setupScrollAnimations() {
-    if(scrollObserver) {
-        scrollObserver.disconnect();
-    }
+    if(scrollObserver) scrollObserver.disconnect();
 
     scrollObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
             if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
+                const delay = parseInt(entry.target.dataset.animDelay || 0, 10);
+                setTimeout(() => {
+                    entry.target.classList.add('visible');
+                    // Remove will-change after animation to free GPU memory
+                    setTimeout(() => {
+                        entry.target.style.willChange = 'auto';
+                    }, 600);
+                }, delay);
                 scrollObserver.unobserve(entry.target);
             }
         });
     }, {
-        threshold: 0.1,
-        rootMargin: '50px'
+        threshold: 0.05,
+        rootMargin: '0px 0px -40px 0px'
     });
 
-    document.querySelectorAll('.card').forEach(card => {
+    document.querySelectorAll('.card').forEach((card, i) => {
+        card.dataset.animDelay = Math.min(i % 4, 3) * 80;
         scrollObserver.observe(card);
+    });
+
+    document.querySelectorAll('.info-card:not(.visible), .service-card:not(.visible)').forEach((el, i) => {
+        if (!el.classList.contains('anim-ready')) {
+            el.classList.add('anim-ready');
+            el.dataset.animDelay = i * 100;
+            scrollObserver.observe(el);
+        }
     });
 }
 
@@ -592,7 +626,7 @@ window.onLangChange = function() {
     updateCartUI();
 };
 
-// Hero CTA button — moved from inline onclick
+// Hero CTA button
 const heroCta = document.getElementById('hero-cta-btn');
 if(heroCta) {
     heroCta.addEventListener('click', () => {

@@ -75,7 +75,7 @@ const productsData = [
         care: "Lumină puternică indirectă, sol bine drenat și udat regulat, umiditate moderată.",
         note: "Înflorește primăvara–vara, părți ușor toxice dacă sunt ingerate.",
         model3d: null,
-        listed: true
+        listed: false
     },
     {
         id: 7,
@@ -97,11 +97,11 @@ const productsData = [
         price: 75,
         image: "assets/lm.avif",
         family: "Liliaceae",
-        desc: "Lilium Mix este un amestec de crini cu flori mari și parfumate, de diverse culori. Aceasta produce flori spectaculoase, oferind un contrast deosebit.",
+        desc: "Lilium Mix este un amestec de crini cu flori mari și parfumate, de diverse culori.",
         care: "Preferă lumină indirectă și umiditate moderată.",
         note: "Ideală pentru decorarea interioarelor datorită aspectului său exotic și întreținerii ușoare.",
         model3d: null,
-        listed: true
+        listed: false
     },
     {
         id: 9,
@@ -110,11 +110,11 @@ const productsData = [
         price: 90,
         image: "assets/kalanchoe.avif",
         family: "Crassulaceae",
-        desc: "Una dintre cele mai populare plante de apartament — înflorire lungă, culori vii și îngrijire minimă. Perfectă pentru orice cameră.",
+        desc: "Una dintre cele mai populare plante de apartament.",
         care: "Lumină multă, udare rară lasă pământul să se usuce complet între udări.",
         note: "Rezistentă și robustă, ideală pentru începători.",
         model3d: "models/Kalanchoe3dModel.glb",
-        listed: false
+        listed: true
     },
     {
         id: 10,
@@ -123,11 +123,11 @@ const productsData = [
         price: 210,
         image: "assets/stephanotis.avif",
         family: "Apocynaceae",
-        desc: "Floarea mireaselor. Parfumul ei dulce și florile albe ca neaua o fac alegerea perfectă pentru ocazii speciale și cadouri rafinate.",
+        desc: "Floarea mireaselor. Parfumul ei dulce și florile albe o fac alegerea perfectă pentru ocazii speciale.",
         care: "Lumină indirectă puternică, umiditate constantă, temperaturi stabile.",
         note: "Sensibilă la curenți de aer și schimbări bruște de temperatură.",
         model3d: "models/Stephanotis3dModel.glb",
-        listed: false
+        listed: true
     },
     {
         id: 11,
@@ -136,11 +136,11 @@ const productsData = [
         price: 160,
         image: "assets/tillandsia.avif",
         family: "Bromeliaceae",
-        desc: "Exotică și fără sol crește în aer liber. Spicul roz aprins cu flori violet este unul dintre cele mai spectaculoase din lumea plantelor.",
+        desc: "Exotică și fără sol crește în aer liber.",
         care: "Pulverizare de 2-3 ori pe săptămână, fără sol, fixată pe suport sau scoarță.",
         note: "Plantă epifită nu are nevoie de ghiveci cu pământ.",
         model3d: "models/Tillandsia3dModel.glb",
-        listed: false
+        listed: true
     },
     {
         id: 12,
@@ -149,10 +149,10 @@ const productsData = [
         price: 200,
         image: "assets/zamioculcas.avif",
         family: "Araceae",
-        desc: "Planta de indestructibilă supraviețuiește în orice condiții. Frunzele lucioase de un verde intens aduc eleganță oricărui spațiu.",
+        desc: "Planta de indestructibilă supraviețuiește în orice condiții.",
         care: "Tolerează lumină redusă și udare rară. Udă o dată la 2-3 săptămâni.",
         note: "Una dintre puținele plante care rezistă și la întuneric total.",
         model3d: "models/Zamioculcas3dModel.glb",
-        listed: false
+        listed: true
     }
 ];
