@@ -70,9 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderProducts('all');
     }
 
-    // Aggressively preload all product images via <link rel="preload"> tags.
-    // This hooks into the browser's native preload scanner so images are
-    // fetched immediately — before the user ever scrolls to them.
     const imageUrls = allProducts.map(p => p.image).filter(Boolean);
     imageUrls.forEach((url, i) => {
         const link = document.createElement('link');
