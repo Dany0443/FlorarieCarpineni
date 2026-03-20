@@ -14,7 +14,7 @@ Vanilla JS, fără frameworks.
 - Comandă directă cu notificare prin email
 - Suport multilingv — română, engleză, rusă
 - Temă light/dark
-- PWA-ready — se poate instala ca aplicație pe telefon
+- PWA-ready — se poate instala ca aplicație pe telefon (doar panul de admin)
 - Pagină de contact cu formular
 - **Panou de administrare** — gestionare produse, vizualizare comenzi în timp real
 
