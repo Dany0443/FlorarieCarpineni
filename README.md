@@ -1,51 +1,63 @@
 # Luci Boutique
 
-Site web pentru o florărie modernă, construit de Alexandru și Dan pentru concursul **Tekwill Junior Ambassadors**.
-
-Vanilla JS, fără frameworks.
+Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambassadors**.
+Vanilla JS, fara frameworks.
 
 ---
 
 ## Ce face
 
-- Colecție de flori cu filtrare pe categorii
-- Vizualizare 3D la 360° (Google Model Viewer) pentru produse selectate
-- Coș de cumpărături persistent (localStorage)
-- Comandă directă cu notificare prin email
-- Suport multilingv — română, engleză, rusă
-- Temă light/dark
-- PWA-ready — se poate instala ca aplicație pe telefon (doar panul de admin)
-- Pagină de contact cu formular
-- **Panou de administrare** — gestionare produse, vizualizare comenzi în timp real
+**Magazin**
+- Filtrare flori pe categorii, modal cu detalii si ingrijire
+- Vizualizare 3D la 360° (Google Model Viewer)
+- Cos persistent in localStorage
+- Comanda cu email automat + factura PDF atasata
+
+**Checkout**
+- Validare input pe client si server
+- Google Pay / Apple Pay prin PaymentRequest API (demo)
+- Confirmare comanda prin email cu PDF
+
+**Admin** — la `/admops`
+- Login cu parola sau passkey (Face ID, fingerprint, Windows Hello)
+- Comenzi in timp real prin WebSocket + sunet la comanda noua
+- Schimbare status comanda → push notification automat pe telefon
+- Adaugare, editare, stergere produse + upload imagine
+- Gestiune dispozitive conectate — redenumire, revocare instant
+- Jurnalizare actiuni, log-uri cu rotatie automata
+
+**Altele**
+- Romana, engleza, rusa
+- Tema light / dark
+- PWA — se poate instala pe telefon, functioneaza offline partial
 
 ---
 
 ## Stack
 
-| Layer | Tehnologie |
+| | |
 |---|---|
-| Frontend | HTML5, CSS3, Vanilla JS |
+| Frontend | HTML, CSS, Vanilla JS |
 | Backend | Node.js + Express |
-| Email | Nodemailer |
-| 3D | Google Model Viewer (GLB) |
-| Auth admin | Session-based, server-side |
+| Auth | Session + WebAuthn (SimpleWebAuthn) |
+| Real-time | Socket.io |
+| Email + PDF | Nodemailer + PDFKit |
+| Push | Web Push + VAPID |
 
 ---
 
-## Rulare locală
+## Rulare
 
 ```bash
 npm install
 node server.js
 ```
 
-Deschide `http://localhost:3000`
-
-Panoul admin e la `/adminpan.html` — credențialele se setează în variabilele env.
+`http://localhost:3000` — admin la `/admops`, credentiale din `.env`.
 
 ---
 
-## Echipă
+## Echipa
 
 Alexandru — [@Sans992](https://github.com/Sans992) / [@WJTMainDev](https://t.me/WJTMainDev)
 
@@ -53,6 +65,4 @@ Daniel — [@Dany0443](https://github.com/Dany0443) / [@Dany0443](https://t.me/D
 
 ---
 
-## Licență
-
-Open source în scop educațional. Imaginile și modelele 3D sunt folosite demonstrativ.
+Open source in scop educational. Realizat in cadrul „Tekwill Junior Ambassadors".
