@@ -6,6 +6,8 @@ const TRANSLATIONS = {
         nav_contact:    'Contact',
         nav_back:       '← Înapoi la magazin',
         nav_back_short: '← Înapoi',
+        theme_dark:     'Temă întunecată',
+        theme_light:    'Temă deschisă',
 
         // Hero
         hero_subtitle:  'Artă Naturală',
@@ -77,6 +79,7 @@ const TRANSLATIONS = {
         btn_submit:       'Trimite Comanda',
         btn_sending:      'Se trimite...',
         btn_retry:        'Încearcă iar',
+        btn_native_pay:   'Achită cu GPay',
 
         // Contact
         contact_title:    'Contactează-ne',
@@ -100,6 +103,7 @@ const TRANSLATIONS = {
         notif_removed:  'Produs eliminat din coș',
         notif_empty:    'Coșul este gol! Adaugă ceva frumos.',
         notif_cart_err: 'Eroare la salvarea coșului',
+        notif_link_copied: 'Link copiat!',
     },
 
     en: {
@@ -108,6 +112,8 @@ const TRANSLATIONS = {
         nav_contact:    'Contact',
         nav_back:       '← Back to shop',
         nav_back_short: '← Back',
+        theme_dark:     'Dark theme',
+        theme_light:    'Light theme',
 
         hero_subtitle:  'Natural Art',
         hero_title1:    'Emotions that',
@@ -172,7 +178,9 @@ const TRANSLATIONS = {
         btn_submit:       'Place Order',
         btn_sending:      'Sending...',
         btn_retry:        'Try again',
+        btn_native_pay:   'Pay with GPay',
 
+        // Contact
         contact_title:    'Contact Us',
         contact_desc:     'Have questions? We\'re here to help with any detail about flowers.',
         contact_phone:    'Phone',
@@ -192,6 +200,7 @@ const TRANSLATIONS = {
         notif_removed:  'Item removed from cart',
         notif_empty:    'Cart is empty! Add something beautiful.',
         notif_cart_err: 'Error saving cart',
+        notif_link_copied: 'Link copied!',
     },
 
     ru: {
@@ -200,6 +209,8 @@ const TRANSLATIONS = {
         nav_contact:    'Контакт',
         nav_back:       '← Назад в магазин',
         nav_back_short: '← Назад',
+        theme_dark:     'Тёмная тема',
+        theme_light:    'Светлая тема',
 
         hero_subtitle:  'Природное Искусство',
         hero_title1:    'Эмоции которые',
@@ -264,7 +275,9 @@ const TRANSLATIONS = {
         btn_submit:       'Отправить Заказ',
         btn_sending:      'Отправляется...',
         btn_retry:        'Попробовать снова',
+        btn_native_pay:   'Оплата с GPay',
 
+        // Contact
         contact_title:    'Свяжитесь с нами',
         contact_desc:     'Есть вопросы? Мы здесь, чтобы помочь с любыми деталями о цветах.',
         contact_phone:    'Телефон',
@@ -284,6 +297,7 @@ const TRANSLATIONS = {
         notif_removed:  'Товар удалён из корзины',
         notif_empty:    'Корзина пуста! Добавьте что-нибудь красивое.',
         notif_cart_err: 'Ошибка сохранения корзины',
+        notif_link_copied: 'Ссылка скопирована!',
     }
 };
 
@@ -306,21 +320,66 @@ function t(key, vars = {}) {
 }
 
 function setLang(lang) {
+    // Check if View Transitions are supported
+    if (document.startViewTransition) {
+        document.startViewTransition(() => {
+            applyLangChange(lang);
+        });
+    } else {
+        // Fallback to old cross-fade if no view transitions
+        document.body.classList.add('lang-switching');
+        setTimeout(() => {
+            applyLangChange(lang);
+            setTimeout(() => {
+                document.body.classList.remove('lang-switching');
+            }, 50);
+        }, 250);
+    }
+}
+
+function applyTheme(theme) {
+    if (!theme) theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    const isDark = theme === 'dark';
+    const currentLang = typeof detectLang === 'function' ? detectLang() : (localStorage.getItem('lb_lang') || 'ro');
+    const themeLabelKey = isDark ? 'theme_dark' : 'theme_light';
+    const apply = () => {
+         document.documentElement.setAttribute('data-theme', theme);
+         localStorage.setItem('lb_theme', theme);
+         document.querySelectorAll('.theme-pill, .theme-pill[data-active]').forEach(pill => {
+             pill.classList.toggle('active', isDark);
+             pill.setAttribute('data-active', isDark ? 'true' : 'false');
+         });
+         document.querySelectorAll('.lb-sheet-theme-label').forEach(label => {
+             label.textContent = t(themeLabelKey);
+         });
+     };
+    if (document.startViewTransition) {
+        document.startViewTransition(apply);
+    } else {
+        apply();
+    }
+}
+
+function applyLangChange(lang) {
     window.__lang = lang;
     localStorage.setItem('lb_lang', lang);
     document.documentElement.lang = lang;
+
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.dataset.i18n;
         const attr = el.dataset.i18nAttr;
         if (attr) { el.setAttribute(attr, t(key)); }
         else { el.textContent = t(key); }
     });
+
     document.querySelectorAll('[data-i18n-ph]').forEach(el => {
         el.placeholder = t(el.dataset.i18nPh);
     });
+
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === lang);
     });
+
     if (typeof window.onLangChange === 'function') window.onLangChange(lang);
 }
 

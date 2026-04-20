@@ -1,3 +1,262 @@
+/**
+ * LuciUI - Project Enhancements Module
+ * Handles: Real Progress Loader, Scroll Reveals, Smart Header, Bottom Sheet, and View Transitions
+ */
+const LuciUI = (function(window, document) {
+    'use strict';
+
+    let _scrollObserver = null;
+
+    /**
+     * Loader with real asset progress
+     */
+    function initLoader() {
+        const loader = document.getElementById('loader');
+        if (!loader) return;
+
+        const dismissLoader = () => {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.classList.add('hidden');
+                setTimeout(() => loader.remove(), 520);
+            }
+        };
+
+        const waitForImages = () => {
+            const imgs = Array.from(document.querySelectorAll('img'));
+            return Promise.all(imgs.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            }));
+        };
+
+        const waitForModels = () => {
+            const viewers = Array.from(document.querySelectorAll('model-viewer'));
+            return Promise.all(viewers.map(v => new Promise(resolve => {
+                v.addEventListener('load', resolve, { once: true });
+                v.addEventListener('error', resolve, { once: true });
+                setTimeout(resolve, 3000); // Max wait
+            })));
+        };
+
+        const domReady = new Promise(resolve => {
+            if (document.readyState !== 'loading') resolve();
+            else document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        });
+
+        const windowLoad = new Promise(resolve => {
+            if (document.readyState === 'complete') resolve();
+            else window.addEventListener('load', resolve, { once: true });
+        });
+
+        Promise.all([domReady, windowLoad, waitForImages(), waitForModels()])
+            .finally(() => {
+                dismissLoader();
+            });
+    }
+
+    /**
+     * Scroll Reveal Animations
+     */
+    function initScrollReveal() {
+        if (_scrollObserver) _scrollObserver.disconnect();
+
+        _scrollObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const delay = Number(el.dataset.revealDelay || 0);
+                setTimeout(() => {
+                    el.classList.add('is-visible', 'visible');
+                    // Reset dynamic delay after reveal so later style changes (ex: theme)
+                    // are not artificially delayed.
+                    el.style.transitionDelay = '0ms';
+                    _scrollObserver.unobserve(el);
+                }, delay);
+            });
+        }, { threshold: 0.06, rootMargin: '0px 0px -48px 0px' });
+
+        document.querySelectorAll('.info-section h2, .section-header h2, .services-header h2, .info-card, .service-card, .card').forEach((el, i) => {
+            if (el.classList.contains('reveal') || el.classList.contains('reveal-heading')) {
+                if (!el.classList.contains('is-visible') && !el.classList.contains('visible')) {
+                    const isCard = el.classList.contains('card');
+                    const baseDelay = isCard ? (i % 4) * 70 : (i % 3) * 45;
+                    const randomJitter = isCard ? Math.floor(Math.random() * 140) : Math.floor(Math.random() * 50);
+                    const revealDelay = Math.min(baseDelay + randomJitter, 420);
+                    el.dataset.revealDelay = String(revealDelay);
+                    el.style.transitionDelay = `${revealDelay}ms`;
+                }
+                _scrollObserver.observe(el);
+                return;
+            }
+            el.classList.add(el.tagName === 'H2' ? 'reveal-heading' : 'reveal');
+            const isCard = el.classList.contains('card');
+            const baseDelay = isCard ? (i % 4) * 70 : (i % 3) * 45;
+            const randomJitter = isCard ? Math.floor(Math.random() * 140) : Math.floor(Math.random() * 50);
+            const revealDelay = Math.min(baseDelay + randomJitter, 420);
+            el.dataset.revealDelay = String(revealDelay);
+            el.style.transitionDelay = `${revealDelay}ms`;
+            _scrollObserver.observe(el);
+        });
+
+        return _scrollObserver;
+    }
+
+    /**
+     * Smart Header (Hide on scroll down, show on up)
+     */
+    function initSmartHeader() {
+        const navbar = document.querySelector('.navbar');
+        if (!navbar) return;
+
+        let lastScrollY = window.scrollY;
+        let ticking = false;
+
+        const updateHeader = () => {
+            const scrollY = window.scrollY;
+            const delta = scrollY - lastScrollY;
+
+            if (scrollY < 100) {
+                navbar.classList.remove('nav-hidden');
+            } else if (delta > 10) {
+                navbar.classList.add('nav-hidden');
+            } else if (delta < -15) {
+                navbar.classList.remove('nav-hidden');
+            }
+
+            lastScrollY = scrollY;
+            ticking = false;
+        };
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(updateHeader);
+                ticking = true;
+            }
+        }, { passive: true });
+    }
+
+    /**
+     * Bottom Sheet for Mobile Settings
+     */
+    function initBottomSheet() {
+        if (window.innerWidth > 1024) return;
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'lb-sheet-backdrop';
+        document.body.appendChild(backdrop);
+
+        const sheet = document.createElement('div');
+        sheet.className = 'lb-bottom-sheet lb-sheet';
+        sheet.innerHTML = `
+            <div class="lb-sheet-handle"></div>
+            <div class="lb-sheet-title">Limbă & Temă</div>
+            <div class="lang-group">
+                <button class="lang-btn" data-lang="ro">RO</button>
+                <button class="lang-btn" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
+            <div class="lb-sheet-theme-row">
+                <span class="lb-sheet-theme-label" data-i18n="theme_dark" data-i18n-attr="textContent"></span>
+                <button class="theme-pill" id="sheet-theme-pill"></button>
+            </div>`;
+        document.body.appendChild(sheet);
+
+        const trigger = document.createElement('button');
+        trigger.className = 'lb-sheet-trigger';
+        trigger.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+        document.body.appendChild(trigger);
+
+        const openSheet = () => {
+            sheet.classList.add('open');
+            backdrop.style.display = 'block';
+            requestAnimationFrame(() => backdrop.classList.add('open'));
+            document.body.style.overflow = 'hidden';
+            syncSheet();
+        };
+
+        const closeSheet = () => {
+            sheet.classList.remove('open');
+            backdrop.classList.remove('open');
+            setTimeout(() => {
+                backdrop.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        };
+
+        const syncSheet = () => {
+            const currentLang = (typeof detectLang === 'function' ? detectLang() : localStorage.getItem('lb_lang')) || 'ro';
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            sheet.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === currentLang);
+            });
+            const pill = sheet.querySelector('.theme-pill');
+            pill.classList.toggle('active', isDark);
+            pill.setAttribute('data-active', isDark ? 'true' : 'false');
+            const label = sheet.querySelector('.lb-sheet-theme-label');
+            if (typeof t === 'function') {
+                label.textContent = t(isDark ? 'theme_dark' : 'theme_light');
+            }
+        };
+
+        trigger.addEventListener('click', openSheet);
+        backdrop.addEventListener('click', closeSheet);
+        
+        sheet.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (typeof window.setLang === 'function') {
+                    LuciUI.withViewTransition(() => window.setLang(btn.dataset.lang));
+                }
+                setTimeout(closeSheet, 150);
+            });
+        });
+
+        sheet.querySelector('.theme-pill').addEventListener('click', () => {
+            if (typeof window.applyTheme === 'function') {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                LuciUI.withViewTransition(() => window.applyTheme(isDark ? 'light' : 'dark'));
+                syncSheet();
+            }
+        });
+
+        // Swipe down to close
+        let touchY = 0;
+        sheet.addEventListener('touchstart', e => touchY = e.touches[0].clientY, { passive: true });
+        sheet.addEventListener('touchend', e => {
+            if (e.changedTouches[0].clientY - touchY > 50) closeSheet();
+        }, { passive: true });
+    }
+
+    /**
+     * View Transition Wrapper
+     */
+    function withViewTransition(callback) {
+        if (document.startViewTransition) {
+            return document.startViewTransition(callback);
+        }
+        callback();
+    }
+
+    function init() {
+        initLoader();
+        initSmartHeader();
+        initScrollReveal();
+        initBottomSheet();
+    }
+
+    return {
+        init,
+        refreshReveal: initScrollReveal,
+        withViewTransition,
+        get observer() { return _scrollObserver; }
+    };
+})(window, document);
+
+document.addEventListener('DOMContentLoaded', () => LuciUI.init());
+
 let preloadedModels = new Set();
 let allProducts = [];
 
@@ -57,13 +316,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res  = await fetch('/api/products');
         const data = await res.json();
-        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
             allProducts = data.products;
         } else {
-            allProducts = [...productsData];
+            allProducts = typeof productsData !== 'undefined' ? [...productsData] : [];
         }
-    } catch {
-        allProducts = [...productsData];
+    } catch (err) {
+        console.warn('API Error, falling back to local data:', err);
+        allProducts = typeof productsData !== 'undefined' ? [...productsData] : [];
     }
 
     if(productContainer) {
@@ -82,7 +342,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Also warm the service worker cache for offline/return visits
     if ('serviceWorker' in navigator) {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
+        });
+
         navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('SW inregistrat cu succes:', reg.scope);
             const sendPreload = (sw) => {
                 if (sw) sw.postMessage({ type: 'PRELOAD_IMAGES', urls: imageUrls });
             };
@@ -91,11 +360,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 navigator.serviceWorker.ready.then(r => sendPreload(r.active));
             }
-        }).catch(() => {});
+        }).catch(err => console.log('Eroare SW:', err));
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') subscribePush();
+            }).catch(() => {});
+        } else if (Notification.permission === 'granted') {
+            subscribePush();
+        }
+    }
+
+    async function subscribePush() {
+        try {
+            const keyRes = await fetch('/api/vapid-key');
+            const keyData = await keyRes.json();
+            if (!keyData.publicKey) return;
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+            });
+            await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sub.toJSON())
+            });
+        } catch (e) { console.warn('Push sub failed:', e); }
+    }
+
+    function urlBase64ToUint8Array(base64) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+        let bits = 0, val = 0, output = [];
+        for (const c of base64) {
+            bits += 6; val = (val << 6) | chars.indexOf(c);
+            if (bits >= 8) { output.push((val >> (bits - 8)) & 0xFF); bits -= 8; }
+        }
+        return new Uint8Array(output);
     }
 
     updateCartUI();
-    setupScrollAnimations();
+    // setupScrollAnimations(); // Replaced by LuciUI.refreshReveal()
+    initToggles();
+    LuciUI.refreshReveal();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product');
+    if (productId) {
+        setTimeout(() => openModal(parseInt(productId, 10)), 300);
+    }
 
     if (window.requestIdleCallback) {
         requestIdleCallback(() => preload3DModels(), { timeout: 3000 });
@@ -132,6 +445,112 @@ function preload3DModels() {
     }
 }
 
+function initToggles() {
+    const langSelectors = [document.getElementById('lang-selector'), document.getElementById('lang-selector-mobile')].filter(Boolean);
+    const themeToggles = [document.getElementById('theme-toggle'), document.getElementById('theme-toggle-mobile')].filter(Boolean);
+
+    // Initial Theme Apply (redundant but safe after head script)
+    const savedTheme = localStorage.getItem('lb_theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    // Language Selector Logic (3 Languages)
+    const updateLangUI = (lang) => {
+        langSelectors.forEach(selector => {
+            selector.setAttribute('data-lang', lang);
+            selector.querySelectorAll('.lang-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.lang === lang);
+            });
+        });
+        
+        // Sync with any standard lang-btns that might exist
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === lang);
+        });
+
+        // Re-render products to update their text if they exist
+        if (typeof renderProducts === 'function' && allProducts.length > 0) {
+            renderProducts(currentCategory);
+        }
+    };
+
+    // Hook into global lang change
+    const originalOnLangChange = window.onLangChange;
+    window.onLangChange = (lang) => {
+        updateLangUI(lang);
+        if (typeof originalOnLangChange === 'function') originalOnLangChange(lang);
+    };
+
+    // Use detectLang from i18n if available, otherwise fallback
+    const currentLang = typeof detectLang === 'function' ? detectLang() : (localStorage.getItem('lb_lang') || 'ro');
+    
+    // We MUST call setLang here to ensure ALL text gets translated on load
+    if (typeof setLang === 'function') {
+        setLang(currentLang);
+    } else {
+        updateLangUI(currentLang);
+    }
+
+    langSelectors.forEach(selector => {
+        selector.querySelectorAll('.lang-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const lang = option.dataset.lang;
+                if (typeof setLang === 'function') {
+                    LuciUI.withViewTransition(() => setLang(lang));
+                } else {
+                    LuciUI.withViewTransition(() => {
+                        localStorage.setItem('lb_lang', lang);
+                        document.documentElement.lang = lang;
+                        updateLangUI(lang);
+                    });
+                }
+            });
+        });
+    });
+
+    // Theme Toggle Logic
+    const updateThemeUI = (isDark) => {
+        themeToggles.forEach(toggle => {
+            toggle.setAttribute('data-active', isDark);
+        });
+        
+        // Sync with any theme-pills (like in bottom sheet)
+        document.querySelectorAll('.theme-pill').forEach(pill => {
+            pill.classList.toggle('active', isDark);
+        });
+    };
+
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    updateThemeUI(currentTheme === 'dark');
+
+    themeToggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const isDark = toggle.getAttribute('data-active') === 'true';
+            const newTheme = isDark ? 'light' : 'dark';
+            
+            if (typeof applyTheme === 'function') {
+                LuciUI.withViewTransition(() => applyTheme(newTheme));
+            } else {
+                LuciUI.withViewTransition(() => {
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('lb_theme', newTheme);
+                });
+            }
+            updateThemeUI(!isDark);
+        });
+    });
+
+    // Handle standard lang-btns if they exist elsewhere
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.dataset.lang;
+            if (typeof setLang === 'function') {
+                LuciUI.withViewTransition(() => setLang(lang));
+            }
+        });
+    });
+}
+
 if(menuBtn && closeMenuBtn) {
     menuBtn.addEventListener('click', () => mobileMenu.classList.add('active'));
     closeMenuBtn.addEventListener('click', () => mobileMenu.classList.remove('active'));
@@ -139,6 +558,34 @@ if(menuBtn && closeMenuBtn) {
     document.querySelectorAll('.mobile-menu a').forEach(link => {
         link.addEventListener('click', () => mobileMenu.classList.remove('active'));
     });
+}
+
+function buildCardElement(product, cart) {
+    const inCartItem = cart ? cart.find(i => i.id === product.id) : null;
+    const btnText = inCartItem ? `${window.t?.('in_cart') ?? 'În Coș'} (${inCartItem.qty}) +` : (window.t?.('add_to_cart') ?? 'Adaugă în coș');
+    const btnClass = inCartItem ? 'add-btn in-cart' : 'add-btn';
+
+    const card = document.createElement('div');
+    card.className = 'card reveal'; 
+
+    card.innerHTML = `
+  <div class="card-img-wrapper" onclick="openModal(${product.id})">
+    <img alt="${product.name}" loading="lazy" decoding="async">
+  </div>
+  <div class="card-info">
+    <h3 class="card-title" onclick="openModal(${product.id})">${product.name}</h3>
+    <div class="card-price">${product.price} MDL</div>
+    <div class="btn-group">
+      <button class="${btnClass}" id="btn-${product.id}" onclick="addToCart(${product.id})">
+        ${btnText}
+      </button>
+    </div>
+  </div>`;
+
+    const img = card.querySelector('img');
+    img.src = product.image;
+
+    return card;
 }
 
 function renderProducts(category) {
@@ -166,35 +613,14 @@ function renderProducts(category) {
     const fragment = document.createDocumentFragment();
 
     filtered.forEach(product => {
-        const inCartItem = cart.find(item => item.id === product.id);
-        const btnText = inCartItem ? `${t('in_cart')} (${inCartItem.qty}) +` : t('add_to_cart');
-        const btnClass = inCartItem ? "add-btn in-cart" : "add-btn";
-
-        const card = document.createElement('div');
-        card.classList.add('card');
-
-        card.innerHTML = `
-            <div class="card-img-wrapper" onclick="openModal(${product.id})">
-                <img src="${product.image}" alt="${product.name}" loading="lazy" decoding="async">
-            </div>
-            <div class="card-info">
-                <h3 class="card-title" onclick="openModal(${product.id})">${product.name}</h3>
-                <div class="card-price">${product.price} MDL</div>
-                <div class="btn-group">
-                     <button class="${btnClass}" id="btn-${product.id}" onclick="addToCart(${product.id})">
-                        ${btnText}
-                     </button>
-                </div>
-            </div>
-        `;
-
+        const card = buildCardElement(product, cart);
         fragment.appendChild(card);
     });
 
     productContainer.innerHTML = '';
     productContainer.appendChild(fragment);
 
-    setupScrollAnimations();
+    LuciUI.refreshReveal();
 }
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -221,6 +647,8 @@ function openModal(id) {
 
     const existing3dBtn = document.querySelector('.btn-3d');
     if(existing3dBtn) existing3dBtn.remove();
+    const existingShareBtn = document.querySelector('.btn-share');
+    if(existingShareBtn) existingShareBtn.remove();
 
     if (product.model3d) {
         const btn3d = document.createElement('button');
@@ -229,6 +657,28 @@ function openModal(id) {
         btn3d.onclick = () => open3DModal(product.model3d);
         document.querySelector('.modal-text-block')?.appendChild(btn3d);
     }
+
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'btn-share';
+    shareBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+    shareBtn.onclick = () => {
+        const shareUrl = `${window.location.origin}/product/${product.id}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: product.name,
+                text: `${product.name} - ${product.price} MDL`,
+                url: shareUrl
+            }).catch(() => {
+                navigator.clipboard?.writeText(shareUrl);
+                showNotification(t('notif_link_copied'));
+            });
+        } else {
+            navigator.clipboard?.writeText(shareUrl);
+            showNotification(t('notif_link_copied'));
+        }
+    };
+    document.querySelector('.modal-actions-row')?.appendChild(shareBtn);
 
     const inCartItem = cart.find(item => item.id === product.id);
     modalAddBtn.innerText = inCartItem ? `${t('modal_add_more')} (${inCartItem.qty})` : t('modal_add');
@@ -240,12 +690,22 @@ function openModal(id) {
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('product', product.id);
+    window.history.replaceState({}, '', shareUrl);
 }
 
 function closeModal() {
     if(!modal) return;
     modal.classList.remove('active');
     document.body.style.overflow = '';
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('product')) {
+        url.searchParams.delete('product');
+        window.history.replaceState({}, '', url);
+    }
 }
 
 function resetViewer() {
@@ -588,7 +1048,7 @@ function setupScrollAnimations() {
             if (entry.isIntersecting) {
                 const delay = parseInt(entry.target.dataset.animDelay || 0, 10);
                 setTimeout(() => {
-                    entry.target.classList.add('visible');
+                    entry.target.classList.add('is-visible');
                     // Remove will-change after animation to free GPU memory
                     setTimeout(() => {
                         entry.target.style.willChange = 'auto';
@@ -602,12 +1062,12 @@ function setupScrollAnimations() {
         rootMargin: '0px 0px -40px 0px'
     });
 
-    document.querySelectorAll('.card').forEach((card, i) => {
-        card.dataset.animDelay = Math.min(i % 4, 3) * 80;
-        scrollObserver.observe(card);
+    document.querySelectorAll('.card, .reveal, .reveal-heading').forEach((el, i) => {
+        el.dataset.animDelay = Math.min(i % 4, 3) * 80;
+        scrollObserver.observe(el);
     });
 
-    document.querySelectorAll('.info-card:not(.visible), .service-card:not(.visible)').forEach((el, i) => {
+    document.querySelectorAll('.info-card:not(.is-visible), .service-card:not(.is-visible)').forEach((el, i) => {
         if (!el.classList.contains('anim-ready')) {
             el.classList.add('anim-ready');
             el.dataset.animDelay = i * 100;

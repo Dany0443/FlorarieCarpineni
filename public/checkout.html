@@ -7,6 +7,7 @@
     <title>Finalizare Comanda - Luci Boutique</title>
     <meta name="description" content="Finalizează comanda ta la Luci Boutique. Livrare rapidă, plată la livrare.">
     <meta name="robots" content="noindex">
+    <meta name="view-transition" content="same-origin">
     <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/checkout.css"></link>
@@ -14,7 +15,21 @@
 <body>
 
     <div id="loader">
-        <div class="loader-bar-bg"><div class="loader-bar-fill"></div></div>
+        <div class="loader-content">
+            <svg class="loader-flower" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(256,256)">
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(60)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(120)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(180)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(240)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(300)"/>
+                    <circle cx="0" cy="0" r="47" fill="var(--primary)"/>
+                    <circle cx="0" cy="0" r="26" fill="var(--bg-color)"/>
+                </g>
+            </svg>
+            <div class="loader-text">Luci Boutique.</div>
+        </div>
     </div>
 
     <nav class="navbar">
@@ -31,6 +46,9 @@
             <h3><span data-i18n="checkout_total">Total de plata:</span> <span id="checkout-total" class="total-amount">0 MDL</span></h3>
             <p class="payment-note" data-i18n="checkout_payment">Plata se face la livrare (ramburs).</p>
         </div>
+
+        <button data-i18n="btn_native_pay" id="native-pay-btn" class="cta-btn submit-btn-full" style="display: none; margin-bottom: 20px; background-color: #000; color: #fff; border: none; outline: none;">
+        </button>
 
         <form id="checkout-form" class="checkout-form-box">
             <div class="form-group">
@@ -59,5 +77,6 @@
     <script src="js/controls.js"></script>
     <script src="js/controls-swipe.js"></script>
     <script src="js/checkout.js"></script>
+    <script>initLang();</script>
 </body>
 </html>
