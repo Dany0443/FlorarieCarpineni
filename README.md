@@ -38,8 +38,8 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 
 | Checkout | 1tap pay |
 | :---: | :---: |
-| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/check.png" width="400" alt="Products"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/1tap.png" width="400" alt="Modal"> |
-| **Mail**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/mail.png" width="400" alt="3D model"> | |
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/Check.png" width="400" alt="Checkout"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/1tap.png" width="400" alt="1tap"> |
+| **Mail**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/mailex.png" width="400" alt="Mail"> | **PDF**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/pdf.png" width="400" alt="pdf">|
 
 </details>
 
