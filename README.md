@@ -1,7 +1,6 @@
 # Luci Boutique
 
 Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambassadors**.
-Vanilla JS, fara frameworks.
 
 ---
 
