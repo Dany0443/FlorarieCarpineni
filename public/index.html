@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Luci Boutique</title>
+    <meta name="description" content="Luci Boutique cele mai proaspete flori din Carpineni, Moldova. Buchete elegante, baloane cu heliu, cutii surpriză și livrare rapidă.">
+    <meta name="keywords" content="flori, buchete, florarie, Carpineni, Moldova, livrare flori, Luci Boutique">
+    <meta name="author" content="Luci Boutique">
+    <meta property="og:title" content="Luci Boutique — Flori Proaspete">
+    <meta property="og:description" content="Cele mai proaspete flori, aranjate cu stil pentru tine. Livrare rapidă în Carpineni și împrejurimi.">
+    <meta property="og:image" content="assets/Anthurium Lily.avif">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ro_MD">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Luci Boutique — Flori Proaspete">
+    <meta name="twitter:description" content="Cele mai proaspete flori, aranjate cu stil pentru tine.">
+    <meta name="twitter:image" content="assets/Anthurium Lily.avif">
+    <meta name="view-transition" content="same-origin">
+    <link rel="icon" type="image/png" href="assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="image" href="assets/Anthurium Lily.avif" fetchpriority="high">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#aa0132">
+    <script>
+        (function() {
+            const savedLang = localStorage.getItem('lb_lang') || 'ro';
+            const savedTheme = localStorage.getItem('lb_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.lang = savedLang;
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="loader-content">
+            <svg class="loader-flower" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(256,256)">
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(60)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(120)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(180)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(240)"/>
+                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(300)"/>
+                    <circle cx="0" cy="0" r="47" fill="var(--primary)"/>
+                    <circle cx="0" cy="0" r="26" fill="var(--bg-color)"/>
+                </g>
+            </svg>
+            <div class="loader-text">Luci Boutique.</div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">Luci Boutique.</a>
+            <div class="nav-links">
+                <a href="index.html" data-i18n="nav_home">Acasă</a>
+                <a href="#shop" data-i18n="nav_collection">Colecție</a>
+                <a href="contact.html" data-i18n="nav_contact">Contact</a>
+            </div>
+
+            <div class="toggles-container">
+                <div class="lang-selector" id="lang-selector">
+                    <div class="lang-option" data-lang="ro">RO</div>
+                    <div class="lang-option" data-lang="en">EN</div>
+                    <div class="lang-option" data-lang="ru">RU</div>
+                    <div class="lang-slider"></div>
+                </div>
+                <div class="toggle-wrapper" id="theme-toggle" aria-label="Schimbă tema / Change theme">
+                    <span class="toggle-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </span>
+                    <div class="toggle-slider">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                    <span class="toggle-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </span>
+                </div>
+            </div>
+
+            <div class="nav-icons">
+                <button id="cart-btn" class="icon-btn" aria-label="Deschide coșul de cumpărături">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                    <span id="cart-count">0</span>
+                </button>
+                <button id="menu-btn" class="icon-btn mobile-only" aria-label="Deschide meniul">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="mobile-menu">
+        <button class="close-menu">✕</button>
+        <div class="mobile-nav-top">
+            <div class="lang-selector" id="lang-selector-mobile">
+                <div class="lang-option" data-lang="ro">RO</div>
+                <div class="lang-option" data-lang="en">EN</div>
+                <div class="lang-option" data-lang="ru">RU</div>
+                <div class="lang-slider"></div>
+            </div>
+            <div class="toggle-wrapper" id="theme-toggle-mobile" aria-label="Schimbă tema / Change theme">
+                <span class="toggle-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <div class="toggle-slider">
+                    <div class="toggle-thumb"></div>
+                </div>
+                <span class="toggle-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+            </div>
+        </div>
+        <div class="mobile-links">
+            <a href="index.html" data-i18n="nav_home">Acasă</a>
+            <a href="#shop" data-i18n="nav_collection">Colecție</a>
+            <a href="contact.html" data-i18n="nav_contact">Contact</a>
+        </div>
+    </div>
+
+    <header id="home" class="hero">
+        <div class="hero-blob"></div>
+        <div class="hero-container">
+            <div class="hero-text-content">
+                <p class="subtitle" data-i18n="hero_subtitle">Artă Naturală</p>
+                <h1 class="title">
+                    <span data-i18n="hero_title1">Emoții care</span> <br>
+                    <span class="highlight-text" data-i18n="hero_title2">Înfloresc.</span>
+                </h1>
+                <p class="desc" data-i18n="hero_desc">Cele mai proaspete flori, aranjate cu stil pentru tine.</p>
+                <div class="hero-buttons">
+                    <button id="hero-cta-btn" class="cta-btn hero-main-btn" data-i18n="hero_cta">
+                        Vezi Colecția
+                    </button>
+                    <a href="contact.html" class="secondary-btn" data-i18n="hero_contact">Contactează-ne</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <img src="assets/Anthurium Lily.avif" alt="Floare Hero" class="hero-img" fetchpriority="high">
+            </div>
+        </div>
+    </header>
+
+    <section class="info-section">
+        <h2 data-i18n="why_title">De ce noi?</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3 data-i18n="why_1_title">Prospețime</h3>
+                <p data-i18n="why_1_desc">Florile noastre vin direct de la producători, proaspete în fiecare dimineață.</p>
+            </div>
+            <div class="info-card">
+                <h3 data-i18n="why_2_title">Livrare Rapidă</h3>
+                <p data-i18n="why_2_desc">Comanzi acum, și în câteva ore florile sunt la ușa ta.</p>
+            </div>
+            <div class="info-card">
+                <h3 data-i18n="why_3_title">Design Unic</h3>
+                <p data-i18n="why_3_desc">Fiecare buchet este o operă de artă, creat cu pasiune.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="shop" class="shop-section">
+        <div class="section-header">
+            <h2 data-i18n="shop_title">Colecția 2026</h2>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all"     data-i18n="filter_all">Toate</button>
+                <button class="filter-btn"         data-filter="Exotic"  data-i18n="filter_exotic">Exotice</button>
+                <button class="filter-btn"         data-filter="Classic" data-i18n="filter_classic">Clasice</button>
+                <button class="filter-btn"         data-filter="Elegant" data-i18n="filter_elegant">Elegante</button>
+                <button class="filter-btn"         data-filter="mix"     data-i18n="filter_mix">Mix</button>
+            </div>
+        </div>
+        <div class="products-grid" id="products-container"></div>
+    </section>
+
+    <section class="services-section">
+        <div class="services-header">
+            <h2 data-i18n="services_title">Universul Cadourilor</h2>
+            <p data-i18n="services_desc">Pentru că o floare vine rareori singură. Completează cadoul perfect.</p>
+        </div>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/baloon.png" alt="Baloane cu Heliu" onerror="this.src='https://placehold.co/400x300?text=Baloane'">
+                </div>
+                <div class="service-content">
+                    <h3 data-i18n="service_1_title">Baloane cu Heliu</h3>
+                    <p data-i18n="service_1_desc">Ridică ștacheta petrecerii! Avem baloane în toate formele și culorile pentru momente festive.</p>
+                </div>
+            </div>
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/jucarii.png" alt="Jucării de Pluș" onerror="this.src='https://placehold.co/400x300?text=Jucarii'">
+                </div>
+                <div class="service-content">
+                    <h3 data-i18n="service_2_title">Suvenire</h3>
+                    <p data-i18n="service_2_desc">Suveniruri speciale și amintiri de neuitat care păstrează magia fiecărui moment. Cadoul perfect pentru a duce bucuria mai departe.</p>
+                </div>
+            </div>
+            <div class="service-card">
+                <div class="service-img-container">
+                    <img src="assets/hartie.png" alt="Cutii Surpriză" onerror="this.src='https://placehold.co/400x300?text=Surprize'">
+                </div>
+                <div class="service-content">
+                    <h3 data-i18n="service_3_title">Cutii Surpriză</h3>
+                    <p data-i18n="service_3_desc">Combinația fatală: flori proaspete, dulciuri fine și mici atenții, toate într-o cutie elegantă.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="cart-overlay"></div>
+    <aside class="cart-drawer">
+        <div class="cart-header">
+            <h3 data-i18n="cart_title">Coșul Tău</h3>
+            <button class="close-cart">✕</button>
+        </div>
+        <div class="cart-items"></div>
+        <div class="cart-footer">
+            <div class="total-row">
+                <span data-i18n="cart_total">Total:</span>
+                <span id="cart-total">0 MDL</span>
+            </div>
+            <button id="checkout-btn" class="checkout-btn" data-i18n="cart_checkout">Finalizează Comanda</button>
+        </div>
+    </aside>
+
+    <div class="modal-overlay" id="product-modal">
+        <div class="modal-content">
+            <button class="modal-close">✕</button>
+            <div class="modal-left">
+                <img src="" alt="" class="modal-img">
+            </div>
+            <div class="modal-details">
+                <h2 class="modal-title">Nume Floare</h2>
+                <div class="modal-text-block">
+                    <p id="modal-family"></p>
+                    <p id="modal-desc"></p>
+                    <p id="modal-care"></p>
+                    <p id="modal-note"></p>
+                </div>
+                <div class="modal-actions">
+                    <p class="modal-price">100 MDL</p>
+                    <div class="modal-actions-row">
+                        <button class="cta-btn modal-add-btn" data-i18n="modal_add">Adaugă în coș</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-3d" style="z-index: 3000;">
+        <div class="modal-content modal-3d-content">
+            <button class="modal-close" id="close-3d">✕</button>
+            <div class="model-wrapper">
+                <model-viewer
+                    id="flower-viewer"
+                    alt="3D Flower"
+                    auto-rotate
+                    camera-controls
+                    shadow-intensity="1"
+                    environment-image="neutral"
+                    exposure="1"
+                    loading="eager">
+                    <div class="progress-bar" slot="progress-bar">
+                        <div class="update-bar"></div>
+                    </div>
+                </model-viewer>
+                <div class="model-controls">
+                    <p data-i18n="modal_rotate">Rotește și mărește</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+    <p data-i18n="footer">&copy; 2026 Luci Boutique. Toate drepturile rezervate.</p>
+    
+    <p class="tekwill-disclaimer">
+        Acest website a fost realizat în cadrul competiției „Tekwill Junior Ambassadors” organizată de proiectul „Tekwill în Fiecare Școală” și nu reflectă neapărat opinia proiectului.
+    </p>
+</footer>
+
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <script src="js/i18n.js" defer></script>
+    <script src="js/products.js" defer></script>
+    <script src="js/telemetry.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Admin Login - Luci Boutique</title>
+<link rel="icon" type="image/png" href="/assets/favicon.svg">
+<script>
+  (function () {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--p:#aa0132;--p-dark:#7a0024;--p-glow:rgba(170,1,50,.10);--bg:#f7f4f1;--surface:#fff;--text:#111;--sub:#888;--border:rgba(0,0,0,.08);--r-sm:9px;--red:#c0392b;--fh:'Baskervville',serif;--fb:'Montserrat',sans-serif}
+[data-theme="dark"]{--bg:#0e0d0c;--surface:#1a1917;--text:#ede9e5;--sub:#9a9188;--border:rgba(255,255,255,.07);--red:#f28b82}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:360px}
+.login-brand{font-family:var(--fh);font-size:1.85rem;color:var(--p);margin-bottom:3px}
+.login-sub{font-size:.72rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--sub);margin-bottom:36px}
+.fg{margin-bottom:10px}
+input{width:100%;padding:14px 15px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--fb);font-size:1rem;background:var(--surface);color:var(--text);transition:border-color .2s,box-shadow .2s}
+input:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px var(--p-glow)}
+[data-theme="dark"] input{background:#141311;color:var(--text);border-color:rgba(255,255,255,.12)}
+[data-theme="dark"] input::placeholder{color:#8f877f}
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--text);
+  -webkit-box-shadow:0 0 0px 1000px #141311 inset;
+  box-shadow:0 0 0px 1000px #141311 inset;
+  transition:background-color 9999s ease-out 0s;
+}
+.login-btn{width:100%;margin-top:6px;padding:14px;background:var(--p);color:#fff;border:none;border-radius:var(--r-sm);font-family:var(--fb);font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s,transform .15s;letter-spacing:.2px}
+.login-btn:hover{background:var(--p-dark)}
+.login-btn:active{transform:scale(.99)}
+.login-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px;font-size:.75rem;color:var(--sub);letter-spacing:.5px;text-transform:uppercase}
+.login-divider:before,.login-divider:after{content:'';flex:1;height:1px;background:var(--border)}
+.passkey-btn{width:100%;padding:13px 16px;background:transparent;color:var(--text);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--fb);font-size:.9rem;font-weight:500;cursor:pointer;display:none;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s,box-shadow .2s;letter-spacing:.1px}
+.passkey-btn:hover{border-color:var(--p);background:var(--p-glow);box-shadow:0 0 0 3px var(--p-glow)}
+.passkey-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{margin-top:10px;font-size:.8rem;color:var(--red);padding:9px 12px;background:#fdf0ef;border-radius:var(--r-sm);border-left:3px solid var(--red);display:none}
+.remember-label{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none;line-height:1}
+.remember-label input[type=checkbox]{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.remember-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .18s,border-color .18s,box-shadow .18s}
+.remember-box:after{content:'';width:6px;height:10px;border:2px solid transparent;border-top:none;border-left:none;transform:rotate(45deg) scale(.85);transition:border-color .18s,transform .18s}
+.remember-label input:focus-visible + .remember-box{outline:none;box-shadow:0 0 0 3px var(--p-glow)}
+.remember-label input:checked + .remember-box{background:var(--p);border-color:var(--p)}
+.remember-label input:checked + .remember-box:after{border-color:#fff;transform:rotate(45deg) scale(1)}
+.remember-text{font-size:.86rem;font-weight:600;color:var(--sub);transform:translateY(1px)}
+[data-theme="dark"] .remember-box{background:#141311;border-color:rgba(255,255,255,.14)}
+[data-theme="dark"] .remember-label input:checked + .remember-box{background:var(--p);border-color:var(--p)}
+</style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-brand">Luci Boutique.</div>
+    <div class="login-sub">Admin</div>
+    <form id="login-form" method="post" action="#" autocomplete="on">
+      <div id="pw-field">
+        <div class="fg"><input type="text" id="u" name="username" placeholder="Utilizator" autocomplete="username" required></div>
+        <div class="fg"><input type="password" id="p" name="password" placeholder="Parola" autocomplete="current-password" required></div>
+        <div class="fg" style="margin-top:8px;">
+          <label class="remember-label" for="remember-me-check">
+            <input type="checkbox" id="remember-me-check">
+            <span class="remember-box"></span>
+            <span class="remember-text">Tine-ma minte</span>
+          </label>
+        </div>
+        <button class="login-btn" id="login-btn" type="submit">Intra</button>
+      </div>
+    </form>
+    <div class="login-divider" id="login-divider" style="display:none;">sau</div>
+    <button class="passkey-btn" id="passkey-btn" type="button">Intra cu Passkey</button>
+    <div id="passkey-hint" style="display:none;margin-top:8px;font-size:.76rem;color:var(--sub);">Passkey devine disponibil dupa ce este inregistrat din Setari.</div>
+    <div class="login-error" id="login-err"></div>
+  </div>
+<script>
+const toBase64Url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+const b64urlToBuffer = b64url => { if (!b64url) return null; const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/'); const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='); return Uint8Array.from(atob(padded), c => c.charCodeAt(0)); };
+let conditionalAbortController = null;
+
+async function checkAuthMethods(){
+  try { const d = await fetch('/api/admops/auth-methods', { credentials:'include' }).then(r=>r.json()); return d.methods || ['password']; }
+  catch { return ['password']; }
+}
+
+function showError(msg){
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+}
+
+async function doLogin(){
+  const username = document.getElementById('u').value.trim();
+  const password = document.getElementById('p').value;
+  const rememberMe = !!document.getElementById('remember-me-check').checked;
+  const btn = document.getElementById('login-btn');
+  if (!username || !password) return showError('Completeaza toate campurile.');
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const res = await fetch('/api/admops/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+      body: JSON.stringify({ username, password, rememberMe })
+    });
+    const d = await res.json();
+    if (d.success) location.href = '/admops';
+    else showError(d.error || 'Eroare login.');
+  } catch {
+    showError('Server indisponibil.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Intra';
+  }
+}
+
+async function submitPasskeyCredential(credential) {
+  const credJSON = {
+    id: credential.id,
+    rawId: toBase64Url(credential.rawId),
+    type: credential.type,
+    response: {
+      authenticatorData: toBase64Url(credential.response.authenticatorData),
+      clientDataJSON:    toBase64Url(credential.response.clientDataJSON),
+      signature:         toBase64Url(credential.response.signature),
+      userHandle: credential.response.userHandle ? toBase64Url(credential.response.userHandle) : null
+    },
+    clientExtensionResults: credential.getClientExtensionResults()
+  };
+  const verifyRes = await fetch('/api/admops/webauthn/verify-authentication', {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+    body: JSON.stringify({ credential: credJSON })
+  });
+  const verifyData = await verifyRes.json();
+  if (verifyData.success) location.href='/admops';
+  else showError(verifyData.error || 'Autentificare esuata.');
+}
+
+async function doPasskey(){
+  if (conditionalAbortController) {
+    conditionalAbortController.abort();
+    conditionalAbortController = null;
+  }
+  const btn = document.getElementById('passkey-btn');
+  btn.disabled = true; btn.textContent = 'Se asteapta passkey...';
+  try {
+    const optsRes = await fetch('/api/admops/webauthn/auth-options', { credentials:'include' });
+    const opts = await optsRes.json();
+    if (!opts.challenge) throw new Error(opts.error || 'Nu pot genera optiunile WebAuthn.');
+    const authOpts = {
+      challenge: b64urlToBuffer(opts.challenge),
+      rpId: opts.rpId,
+      allowCredentials: (opts.allowCredentials || []).map(c => ({ ...c, id: b64urlToBuffer(c.id) })),
+      userVerification: opts.userVerification || 'preferred',
+      timeout: opts.timeout
+    };
+    const credential = await navigator.credentials.get({ publicKey: authOpts });
+    await submitPasskeyCredential(credential);
+  } catch (e) {
+    showError(e.name === 'NotAllowedError' ? 'Ai anulat cererea. Incearca din nou.' : (e.message || 'Eroare passkey.'));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Intra cu Passkey';
+  }
+}
+
+(async function init(){
+  // Register the submit listener FIRST — before any async work —
+  // so a network error can never prevent the form from being interceptable.
+  document.getElementById('login-form').addEventListener('submit', e => {
+    e.preventDefault();
+    doLogin();
+  });
+  document.getElementById('passkey-btn').addEventListener('click', doPasskey);
+
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (mq && typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', e => {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    });
+  }
+
+  const methods = await checkAuthMethods();
+  const hasPasskey = methods.includes('passkey') && window.PublicKeyCredential;
+  const passkeyHint = document.getElementById('passkey-hint');
+  if (hasPasskey) {
+    document.getElementById('passkey-btn').style.display = 'flex';
+    document.getElementById('login-divider').style.display = 'flex';
+    if (passkeyHint) passkeyHint.style.display = 'none';
+  } else if (passkeyHint) {
+    passkeyHint.style.display = 'block';
+  }
+  if (hasPasskey && window.PublicKeyCredential && await PublicKeyCredential.isConditionalMediationAvailable()) {
+    try {
+      const optsRes = await fetch('/api/admops/webauthn/auth-options', { credentials:'include' });
+      const opts = await optsRes.json();
+      if (opts.challenge) {
+        conditionalAbortController = new AbortController();
+        const credential = await navigator.credentials.get({
+          publicKey: {
+            challenge: b64urlToBuffer(opts.challenge),
+            rpId: opts.rpId,
+            allowCredentials: (opts.allowCredentials || []).map(c => ({ ...c, id: b64urlToBuffer(c.id) })),
+            userVerification: opts.userVerification || 'preferred',
+            timeout: opts.timeout
+          },
+          mediation: 'conditional',
+          signal: conditionalAbortController.signal
+        });
+        if (credential) await submitPasskeyCredential(credential);
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') console.log('Conditional passkey skipped:', e.message);
+    }
+  }
+
+})();
+</script>
+</body>
+</html>

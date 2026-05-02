@@ -19,22 +19,36 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const webpush = require('web-push');
 const cookieParser  = require('cookie-parser');
+const bcrypt = require('bcrypt');
 const activityLog   = require('./ext/activityLog');
 const deviceManager = require('./ext/deviceManager');
+const telemetryProcessor = require('./ext/telemetryProcessor');
 const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } = require('@simplewebauthn/server');
 const { isoBase64URL, isoBase64ToBuffer, isoUint8ArrayToBase64 } = require('@simplewebauthn/server/helpers');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DIR_DATA      = path.join(__dirname, 'data');
 const DIR_PUBLIC    = path.join(__dirname, 'public');
+const DIR_PRIVATE   = path.join(__dirname, 'private');
 const DIR_UPLOADS   = path.join(DIR_PUBLIC, 'uploads');
 const FILE_ORDERS   = path.join(DIR_DATA, 'orders.json');
 const FILE_LOGS     = path.join(DIR_DATA, 'server.log');
 const FILE_PRODUCTS = path.join(DIR_PUBLIC, 'js', 'products.js');
 const FILE_CREDS    = path.join(DIR_DATA, 'credentials.json');
 const FILE_PUSH     = path.join(DIR_DATA, 'push-subscriptions.json');
+const FILE_TELEMETRY = path.join(DIR_DATA, 'telemetry.json');
+const FILE_TELEMETRY_SETTINGS = path.join(DIR_DATA, 'telemetry-settings.json');
 const Logger = require('./ext/logger');
 const logger = new Logger(DIR_DATA);
+const MAX_TELEMETRY_EVENTS = 20000;
+const DEFAULT_TELEMETRY_SETTINGS = {
+    enabled: true,
+    errors: true,
+    performance: true,
+    clicks: true,
+    td3: true,
+    checkout: true
+};
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC  || '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
@@ -89,6 +103,8 @@ if (!fs.existsSync(FILE_ORDERS)) fs.writeFileSync(FILE_ORDERS, '[]');
 if (!fs.existsSync(FILE_LOGS))   fs.writeFileSync(FILE_LOGS, '');
 if (!fs.existsSync(FILE_CREDS))  fs.writeFileSync(FILE_CREDS, '[]');
 if (!fs.existsSync(FILE_PUSH))   fs.writeFileSync(FILE_PUSH, '[]');
+if (!fs.existsSync(FILE_TELEMETRY)) fs.writeFileSync(FILE_TELEMETRY, '[]');
+if (!fs.existsSync(FILE_TELEMETRY_SETTINGS)) fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(DEFAULT_TELEMETRY_SETTINGS, null, 2));
 
 
 function escHtml(s) {
@@ -129,9 +145,6 @@ function validateAddress(val) {
 }
 
 function sanitizeNoSQL(val) {
-    // Arrays must be handled BEFORE the object branch — arrays are typeof 'object'
-    // and without this check they become plain objects { '0': x, '1': y, ... }
-    // which breaks every downstream .filter()/.map() call on the cart.
     if (Array.isArray(val)) {
         return val.map(item => sanitizeNoSQL(item));
     }
@@ -145,6 +158,120 @@ function sanitizeNoSQL(val) {
         return clean;
     }
     return sanitize(val, 10000);
+}
+
+function parseUserAgent(uaRaw) {
+    const ua = String(uaRaw || '');
+    const l  = ua.toLowerCase();
+    const isBrave = l.includes('brave') || (l.includes('chrome') && l.includes('opt/') && !l.includes('edg/'));
+    const isFirefox = l.includes('firefox/') && !l.includes('seamonkey/');
+    const isSafari = l.includes('safari/') && !l.includes('chrome/') && !l.includes('chromium');
+    const isEdge   = l.includes('edg/');
+    const isOpera  = l.includes('opr/') || l.includes('opera');
+    const isChrome = !isEdge && !isOpera && !isSafari && (l.includes('chrome/') || l.includes('chromium'));
+    let browser = 'Unknown';
+    if      (isBrave)   browser = 'Brave';
+    else if (isEdge)    browser = 'Edge';
+    else if (isOpera)   browser = 'Opera';
+    else if (isChrome)  browser = 'Chrome';
+    else if (isFirefox) browser = 'Firefox';
+    else if (isSafari)  browser = 'Safari';
+
+    let os = 'Unknown';
+    if      (l.includes('windows nt 11'))      os = 'Windows 11';
+    else if (l.includes('windows nt 10'))     os = 'Windows 10';
+    else if (l.includes('windows nt 6.3'))    os = 'Windows 8.1';
+    else if (l.includes('windows nt 6.2'))    os = 'Windows 8';
+    else if (l.includes('windows nt 6.1'))    os = 'Windows 7';
+    else if (l.includes('windows'))           os = 'Windows';
+    else if (l.includes('chromeos'))          os = 'Chrome OS';
+    else if (l.includes('android'))           os = 'Android';
+    else if (l.includes('iphone') && !l.includes('ipad')) os = 'iOS';
+    else if (l.includes('ipad') || l.includes('tablet'))   os = 'iPadOS';
+    else if (l.includes('mac os x') && !l.includes('iphone')) os = 'macOS';
+    else if (l.includes('macintosh'))          os = 'macOS';
+    else if (l.includes('linux') && !l.includes('android')) os = 'Linux';
+    else if (l.includes('ubuntu'))            os = 'Ubuntu';
+    else if (l.includes('fedora'))            os = 'Fedora';
+    else if (l.includes('debian'))            os = 'Debian';
+
+    const isMobile = /mobi|android|iphone|ipad|ipod|webos|blackberry|iemobile|opera mini/i.test(ua);
+    const isTablet = /(ipad|tablet|playbook|silk|tablet pc)/i.test(ua) && !/mobi/i.test(ua);
+    return { os, browser, isMobile, isTablet };
+}
+
+function telemetryDayKey(tsMs) {
+    return new Date(tsMs).toISOString().slice(0, 10);
+}
+
+const geoip = require('geoip-lite');
+
+function getCountryFromReq(req) {
+    const ip = getRealIp(req);
+    if (!ip || ip === '::1' || ip === '127.0.0.1') return 'unknown';
+    const geo = geoip.lookup(ip);
+    return geo?.country || 'unknown';
+}
+
+function readTelemetryEvents() {
+    try {
+        const data = JSON.parse(fs.readFileSync(FILE_TELEMETRY, 'utf-8'));
+        return Array.isArray(data) ? data : [];
+    } catch {
+        return [];
+    }
+}
+
+function appendTelemetryEvents(events) {
+    if (!events.length) return 0;
+    const existing = readTelemetryEvents();
+    existing.push(...events);
+    const trimmed = existing.length > MAX_TELEMETRY_EVENTS
+        ? existing.slice(existing.length - MAX_TELEMETRY_EVENTS)
+        : existing;
+    fs.writeFileSync(FILE_TELEMETRY, JSON.stringify(trimmed, null, 2));
+    telemetryProcessor.invalidate();
+    return events.length;
+}
+
+function readTelemetrySettings() {
+    try {
+        const raw = JSON.parse(fs.readFileSync(FILE_TELEMETRY_SETTINGS, 'utf-8'));
+        return { ...DEFAULT_TELEMETRY_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
+    } catch {
+        return { ...DEFAULT_TELEMETRY_SETTINGS };
+    }
+}
+
+function saveTelemetrySettings(next) {
+    const merged = { ...DEFAULT_TELEMETRY_SETTINGS, ...next };
+    fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(merged, null, 2));
+    return merged;
+}
+
+function decodeTelemetryText(val) {
+    if (val == null) return '';
+    return String(val)
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#x2F;/gi, '/');
+}
+
+function safeTelemetryNumber(val) {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : null;
+}
+
+function toTopList(mapObj, limit = 8) {
+    return Object.entries(mapObj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([label, value]) => ({ label, value }));
 }
 
 function readProducts() {
@@ -194,6 +321,8 @@ const mailer = nodemailer.createTransport({
 // trebuie sa fie pe enviroment usr si pass.
 const ADMIN_USER      = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS      = process.env.ADMIN_PASS || 'admin1132';
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || '';
+const BCRYPT_HASH_RE  = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
 // Fix 1: SESSION_SECRET must be stable across restarts.
 // If it's missing from .env, every server restart signs out ALL active sessions.
@@ -222,20 +351,63 @@ function saveCreds(creds) {
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
+async function verifyAdminPassword(password) {
+    const configuredHash = ADMIN_PASS_HASH || (BCRYPT_HASH_RE.test(ADMIN_PASS) ? ADMIN_PASS : '');
+    if (configuredHash) {
+        try {
+            return await bcrypt.compare(password, configuredHash);
+        } catch (err) {
+            logger.error(`bcrypt compare failed: ${err.message}`);
+            return false;
+        }
+    }
+    return password === ADMIN_PASS;
+}
+
 function requireAdm(req, res, next) {
     if (!req.session || !req.session.authenticated) {
         return res.status(401).json({ success: false, error: 'Unauthorized.' });
     }
-    // If the device was revoked after this session was created, invalidate immediately
+    // Re-hydrate device record if it went missing (e.g. server restart cleared in-memory state).
+    // Only hard-block if the device was explicitly revoked via revokeDevice().
     const deviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req);
-    if (deviceToken && !deviceManager.getDevice(deviceToken)) {
-        req.session.destroy(() => {});
-        return res.status(401).json({ success: false, error: 'Dispozitiv revocat.' });
+    if (deviceToken) {
+        const device = deviceManager.getDevice(deviceToken);
+        if (!device) {
+            // Device missing from manager — restore it from session context rather than
+            // killing the session. The session itself is proof of prior authentication.
+            deviceManager.upsertDevice(deviceToken, {
+                ip:         getRealIp(req),
+                userAgent:  req.headers['user-agent'],
+                authMethod: 'session-restore',
+            });
+        }
     }
     if (req.session.usingPasskey && req.session.lastPasskeyAuth) {
         const passkeyGracePeriod = 30 * 60 * 1000;
         if (Date.now() - req.session.lastPasskeyAuth < passkeyGracePeriod) {
             return next();
+        }
+    }
+    next();
+}
+
+function requireAdmPage(req, res, next) {
+    if (!req.session || !req.session.authenticated) {
+        return res.redirect(302, '/login');
+    }
+    // Re-hydrate device record if it went missing (e.g. server restart cleared in-memory state).
+    // Only hard-block if the device was explicitly revoked via revokeDevice().
+    const deviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req);
+    if (deviceToken) {
+        const device = deviceManager.getDevice(deviceToken);
+        if (!device) {
+            // Device missing — restore silently. Session is proof of prior authentication.
+            deviceManager.upsertDevice(deviceToken, {
+                ip:         getRealIp(req),
+                userAgent:  req.headers['user-agent'],
+                authMethod: 'session-restore',
+            });
         }
     }
     next();
@@ -324,6 +496,14 @@ if (!fs.existsSync(sessionsDir)) {
     fs.mkdirSync(sessionsDir, { recursive: true });
 }
 
+function fileStoreLog(msg) {
+    const text = String(msg || '');
+    if (!text) return;
+    if (text.includes('ENOENT')) return; // stale session file races are harmless
+    if (text.includes('Deleting expired sessions')) return; // noisy periodic cleanup
+    logger.warn(`[session-file-store] ${text}`);
+}
+
 app.set('trust proxy', 1); // Trust Nginx so secure cookies work
 // Helper: get the real client IP even when behind nginx reverse proxy.
 // nginx should set: proxy_set_header X-Real-IP $remote_addr;
@@ -333,29 +513,94 @@ function getRealIp(req) {
         || (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
         || req.ip;
 }
+
+function getRequestOrigin(req) {
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').toString().split(',')[0].trim();
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toString().split(',')[0].trim();
+    if (!host) return `http://localhost:${PORT}`;
+    return `${proto}://${host}`;
+}
+
+function normalizeSiteUrl(rawValue, fallback) {
+    const raw = String(rawValue || '').trim().replace(/^['"`]+|['"`]+$/g, '');
+    if (!raw) return fallback;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+        return new URL(withScheme).origin;
+    } catch {
+        return fallback;
+    }
+}
+
+function normalizeRpId(rawValue, fallbackOrigin) {
+    const raw = String(rawValue || '').trim().replace(/^['"`]+|['"`]+$/g, '');
+    if (raw) {
+        if (/^https?:\/\//i.test(raw)) {
+            try { return new URL(raw).hostname; } catch {}
+        }
+        return raw.replace(/\/+$/, '');
+    }
+    try { return new URL(fallbackOrigin).hostname; } catch { return 'localhost'; }
+}
+
+function getWebAuthnContext(req) {
+    const requestOrigin = getRequestOrigin(req);
+    const expectedOrigin = normalizeSiteUrl(process.env.SITE_URL, requestOrigin);
+    const rpId = normalizeRpId(process.env.RP_ID, expectedOrigin);
+    return { expectedOrigin, rpId };
+}
 app.use(cookieParser()); // needed to read device_id cookie separately from session
+
+// Explicitly trust proxy headers from Nginx for HTTPS cookies
+const normalizedSiteUrl = normalizeSiteUrl(process.env.SITE_URL, `http://localhost:${PORT}`);
+const isHttpsSite = normalizedSiteUrl.startsWith('https://');
+app.set('trust proxy', 1);
+
 app.use(session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    proxy: true,
     rolling: false, // do NOT roll — let the per-login maxAge stick
     store: new FileStore({
         path: sessionsDir,
         secret: SESSION_SECRET,
         ttl: 30 * 24 * 60 * 60, // max possible — actual expiry driven by cookie
-        retries: 1
+        retries: 0,
+        logFn: fileStoreLog
     }),
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isHttpsSite || process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         // No default maxAge — session cookie by default; login sets it per rememberMe choice
     },
     name: 'admin_sid'
 }));
-app.use(cors());
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : [`http://localhost:${PORT}`],
+    credentials: true
+}));
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
+
+const ADMOPS_PUBLIC_PATHS = new Set([
+    '/login',
+    '/logout',
+    '/auth-methods',
+    '/check-device-passkey',
+    '/webauthn/auth-options',
+    '/webauthn/options',
+    '/webauthn/verify-authentication',
+]);
+
+app.use('/api/admops', (req, res, next) => {
+    if (ADMOPS_PUBLIC_PATHS.has(req.path)) return next();
+    return requireAdm(req, res, next);
+});
+
 app.use(express.static(DIR_PUBLIC, {
     maxAge: '1d',
     setHeaders(res, filePath) {
@@ -496,6 +741,7 @@ app.get('/product/:id', (req, res) => {
     <script src="/js/i18n.js"></script>
     <script src="/js/controls.js"></script>
     <script src="/js/controls-swipe.js"></script>
+    <script src="/js/telemetry.js"></script>
     <script src="/js/app.js" defer></script>
     <script>initLang();</script>
 </body>
@@ -503,11 +749,29 @@ app.get('/product/:id', (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(html);
 });
-app.get('/admops', (req, res) => {
+app.get('/login', (req, res) => {
+    if (req.session?.authenticated) return res.redirect(302, '/admops');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(DIR_PUBLIC, 'adminpan.html'));
+    res.sendFile(path.join(DIR_PUBLIC, 'login.html'));
 });
+
+app.get('/admops', requireAdmPage, (req, res) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(DIR_PRIVATE, 'admin.html'));
+});
+
+app.get('/admin', (req, res) => res.redirect(302, '/admops'));
+
+app.use('/private', requireAdmPage, express.static(DIR_PRIVATE, {
+    maxAge: 0,
+    etag: true,
+    lastModified: true,
+    setHeaders(res) {
+        res.setHeader('Cache-Control', 'private, no-store');
+    }
+}));
 
 
 // api custom 
@@ -522,8 +786,66 @@ app.get('/api/products', (req, res) => {
     }
 });
 
+app.get('/api/telemetry-settings', (req, res) => {
+    const settings = readTelemetrySettings();
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, settings });
+});
+
+app.post('/api/telemetry', express.text({ type: '*/*', limit: '256kb' }), (req, res) => {
+    try {
+        const settings = readTelemetrySettings();
+        if (settings.enabled === false) return res.json({ success: true, accepted: 0 });
+
+        let payload = [];
+        if (typeof req.body === 'string' && req.body.trim()) {
+            payload = JSON.parse(req.body);
+        } else if (Array.isArray(req.body)) {
+            payload = req.body;
+        } else {
+            return res.json({ success: true, accepted: 0 });
+        }
+        if (!Array.isArray(payload) || payload.length === 0) return res.json({ success: true, accepted: 0 });
+
+        const ua       = req.headers['user-agent'] || '';
+        const parsedUa = parseUserAgent(ua);
+        const country  = getCountryFromReq(req);
+        const ip       = getRealIp(req);
+        const now      = Date.now();
+        const allowed  = new Set(['page_view', 'time_on_page', 'web_vital', 'js_error', 'click', 'product_view', 'cart_add', 'checkout_attempt', 'checkout_success', 'checkout_fail', 'native_pay_attempt', 'payment_method_shown', 'model_fps', 'model_load_start', 'model_load_end', 'model_error', 'contact_submit']);
+
+        const normalized = payload
+            .slice(0, 200)
+            .filter(e => e && typeof e === 'object')
+            .map(e => {
+                const event = sanitize(e.event, 40).toLowerCase();
+                if (!allowed.has(event)) return null;
+                const ts = Number(e.ts);
+                const data = (e.data && typeof e.data === 'object') ? sanitizeNoSQL(e.data) : {};
+                return {
+                    event,
+                    data,
+                    sessionId: sanitize(e.sessionId, 120),
+                    ts: Number.isFinite(ts) ? ts : now,
+                    serverTs: now,
+                    country,
+                    ip,
+                    ua: sanitize(ua, 300),
+                    parsedUa
+                };
+            })
+            .filter(Boolean);
+
+        const accepted = appendTelemetryEvents(normalized);
+        res.json({ success: true, accepted });
+    } catch (e) {
+        logger.error(`telemetry ingest: ${e.message}`);
+        res.status(400).json({ success: false, error: 'Telemetry payload invalid.' });
+    }
+});
+
 // api pentru admin fiecare endpoint este verificat.
-app.post('/api/admops/login', loginLimiter, (req, res) => {
+app.post('/api/admops/login', loginLimiter, async (req, res) => {
     const ip       = getRealIp(req);
     const brute    = checkBrute(ip);
     if (!brute.ok) {
@@ -531,9 +853,10 @@ app.post('/api/admops/login', loginLimiter, (req, res) => {
         return res.status(429).json({ success: false, error: `Prea multe încercări. Așteptați ${brute.wait}s.` });
     }
     const username   = sanitize(req.body.username, 80);
-    const password   = sanitize(req.body.password, 200);
+    const password   = String(req.body.password ?? '').slice(0, 200);
     const rememberMe = req.body.rememberMe === true;
-    if (!username || !password || username !== ADMIN_USER || password !== ADMIN_PASS) {
+    const passOk = username === ADMIN_USER ? await verifyAdminPassword(password) : false;
+    if (!username || !password || username !== ADMIN_USER || !passOk) {
         logger.warn(`Login esuat: ${ip} — user: ${username}`);
         activityLog.logActivity('password', 'login_failed', { ip });
         return res.status(401).json({ success: false, error: 'Credentiale gresite.' });
@@ -573,7 +896,13 @@ app.post('/api/admops/login', loginLimiter, (req, res) => {
 
         io.emit('devices_update', deviceManager.getAllDevices());
 
-        res.json({ success: true });
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                logger.error(`Session save failed (password login): ${saveErr.message}`);
+                return res.status(500).json({ success: false, error: 'Eroare server.' });
+            }
+            res.json({ success: true });
+        });
     });
 });
 
@@ -589,20 +918,20 @@ app.get('/api/admops/webauthn/auth-options', webauthnOptionsLimiter, async (req,
         if (creds.length === 0) return res.status(400).json({ success: false, error: 'Niciun passkey inregistrat.' });
         const challengeBytes = crypto.randomBytes(32);
         req.session.webauthnChallenge = challengeBytes.toString('base64url');
-        const siteUrl = process.env.SITE_URL || `http://localhost:${PORT}`;
-        const rpId = process.env.RP_ID || new URL(siteUrl).hostname;
+        const { rpId } = getWebAuthnContext(req);
         const opts = await generateAuthenticationOptions({
             rpId,
             timeout: 120000,
-            challenge: challengeBytes,
+            // WebAuthn helper expects base64url challenge as string, not raw bytes.
+            challenge: req.session.webauthnChallenge,
             allowCredentials: creds.map(c => ({
-                id: Buffer.from(c.credentialID, 'base64url'),
+                id: c.credentialID,
                 type: 'public-key',
                 transports: c.transports || ['internal']
             })),
             userVerification: 'preferred'
         });
-        res.json({
+        const payload = {
             challenge: req.session.webauthnChallenge,
             rpId: opts.rpId,
             timeout: opts.timeout,
@@ -611,6 +940,15 @@ app.get('/api/admops/webauthn/auth-options', webauthnOptionsLimiter, async (req,
                 id: typeof c.id === 'string' ? c.id : Buffer.from(c.id).toString('base64url')
             })),
             userVerification: opts.userVerification
+        };
+        // Explicitly flush session to disk before responding — the file-based session store
+        // may not persist in time for the verify request that immediately follows.
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                logger.error(`Session save failed (auth-opts): ${saveErr.message}`);
+                return res.status(500).json({ success: false, error: 'Eroare server.' });
+            }
+            res.json(payload);
         });
     } catch (e) { logger.error(`WebAuthn auth-opts: ${e.message}`); res.status(500).json({ success: false, error: e.message }); }
 });
@@ -619,32 +957,43 @@ app.get('/api/admops/webauthn/auth-options', webauthnOptionsLimiter, async (req,
 app.get('/api/admops/webauthn/register-options', webauthnOptionsLimiter, requireAdm, async (req, res) => {
     try {
         const creds = readCreds();
-        const siteUrl = process.env.SITE_URL || `http://localhost:${PORT}`;
-        const rpId = process.env.RP_ID || new URL(siteUrl).hostname;
-        const userId = crypto.randomBytes(16);
+        const { expectedOrigin, rpId } = getWebAuthnContext(req);
+        // Accept ?uv=discouraged as a fallback from clients that failed with 'preferred'
+        // (e.g. Android devices where the Credential Manager throws NotReadableError when
+        // biometrics are not enrolled, instead of gracefully falling back).
+        const allowedUV = ['required', 'preferred', 'discouraged'];
+        const userVerification = allowedUV.includes(req.query.uv) ? req.query.uv : 'preferred';
+        // Accept ?clearExclude=1 to send an empty excludeCredentials list.
+        // Fixes a Chrome/Android Credential Manager bug where the presence of a matching
+        // credential ID in excludeCredentials causes NotReadableError instead of InvalidStateError.
+        const clearExclude = req.query.clearExclude === '1';
+        logger.info(`WebAuthn reg-opts: origin=${getRequestOrigin(req)}, rpId=${rpId}, uv=${userVerification}, clearExclude=${clearExclude}`);
+        // Keep a base64url string in session for client JSON, but pass raw bytes to SimpleWebAuthn.
+        const webauthnUserIdB64 = crypto.randomBytes(16).toString('base64url');
+        const userId = Buffer.from(webauthnUserIdB64, 'base64url');
         req.session.webauthnChallenge = crypto.randomBytes(32).toString('base64url');
-        req.session.webauthnUserId = userId.toString('base64url');
+        req.session.webauthnUserId = webauthnUserIdB64;
         const opts = await generateRegistrationOptions({
             rpName: 'Luci Boutique Admin',
             rpId,
             userName: ADMIN_USER,
             userDisplayName: 'Administrator',
-            userId,
+            userID: userId,
+            challenge: req.session.webauthnChallenge,
             timeout: 120000,
             attestationType: 'none',
             authenticatorSelection: {
-                authenticatorAttachment: 'platform',
-                residentKey: 'required',
-                userVerification: 'preferred'
+                residentKey: 'preferred',
+                userVerification,
             },
             supportedAlgorithmIDs: [-7, -257],
-            excludeCredentials: creds.map(c => ({
-                id: Buffer.from(c.credentialID, 'base64url'),
+            excludeCredentials: clearExclude ? [] : creds.map(c => ({
+                id: c.credentialID,
                 type: 'public-key',
                 transports: c.transports || ['internal']
             }))
         });
-        res.json({
+        const payload = {
             challenge: req.session.webauthnChallenge,
             rp: opts.rp,
             user: { ...opts.user, id: req.session.webauthnUserId },
@@ -656,6 +1005,16 @@ app.get('/api/admops/webauthn/register-options', webauthnOptionsLimiter, require
             })),
             attestation: opts.attestation,
             authenticatorSelection: opts.authenticatorSelection
+        };
+        logger.info(`WebAuthn reg-opts: rp.id=${opts.rp.id}, alg count=${opts.pubKeyCredParams?.length}`);
+        // Explicitly flush session to disk before responding — the file-based store may not
+        // persist quickly enough for the verify-registration request that immediately follows.
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                logger.error(`Session save failed (reg-opts): ${saveErr.message}`);
+                return res.status(500).json({ success: false, error: 'Eroare server.' });
+            }
+            res.json(payload);
         });
     } catch (e) { logger.error(`WebAuthn reg-opts: ${e.message}`); res.status(500).json({ success: false, error: e.message }); }
 });
@@ -678,29 +1037,29 @@ app.post('/api/admops/webauthn/verify-registration', webauthnVerifyLimiter, asyn
         if (!body || !body.credential) {
             return res.status(400).json({ success: false, error: 'Credential invalid.' });
         }
-        const siteUrl = process.env.SITE_URL || `http://localhost:${PORT}`;
-        const rpId = process.env.RP_ID || new URL(siteUrl).hostname;
+        const { expectedOrigin, rpId } = getWebAuthnContext(req);
         const expectedChallenge = req.session.webauthnChallenge;
         if (!expectedChallenge) return res.status(400).json({ success: false, error: 'Sesiune expirata. Reincearca.' });
         delete req.session.webauthnChallenge;
         const verification = await verifyRegistrationResponse({
             response: body.credential,
             expectedChallenge,
-            expectedOrigin: siteUrl,
+            expectedOrigin,
             expectedRPID: rpId
         });
         if (!verification.verified) return res.status(400).json({ success: false, error: 'Verificare esuata.' });
-        const { credentialID, credentialPublicKey, counter, transports } = verification.registrationInfo;
+        // v9+: credential info lives in registrationInfo.credential (not top-level)
+        const { credential: regCred } = verification.registrationInfo;
         const creds = readCreds();
-        const credIdStr = Buffer.from(credentialID).toString('base64url');
-        if (creds.some(c => c.credentialID === credIdStr)) {
+        // regCred.id is already a base64url string in v9 — no Buffer wrapping needed
+        if (creds.some(c => c.credentialID === regCred.id)) {
             return res.status(400).json({ success: false, error: 'Passkey deja inregistrat.' });
         }
         creds.push({
-            credentialID: credIdStr,
-            publicKey:    Buffer.from(credentialPublicKey).toString('base64url'),
-            counter,
-            transports:   transports || [],
+            credentialID: regCred.id,
+            publicKey:    Buffer.from(regCred.publicKey).toString('base64url'),
+            counter:      regCred.counter,
+            transports:   body.credential.transports || [],
             deviceName:   req.body.deviceName || 'Dispozitiv necunoscut',
             createdAt:    new Date().toISOString()
         });
@@ -709,16 +1068,23 @@ app.post('/api/admops/webauthn/verify-registration', webauthnVerifyLimiter, asyn
         // Link the new passkey to the current device record
         const deviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req);
         if (deviceToken) {
-            deviceManager.linkPasskey(deviceToken, credIdStr);
+            deviceManager.linkPasskey(deviceToken, regCred.id);
         }
 
-        req.session.authenticated  = true;
-        req.session.loginTime      = Date.now();
-        req.session.usingPasskey   = true;
-        req.session.cookie.maxAge  = 30 * 24 * 60 * 60 * 1000;
+        req.session.authenticated   = true;
+        req.session.loginTime       = Date.now();
+        req.session.usingPasskey    = true;
+        req.session.lastPasskeyAuth = Date.now(); // was missing — grace period check in requireAdm needs this
+        req.session.cookie.maxAge   = 30 * 24 * 60 * 60 * 1000;
         logger.info(`Passkey inregistrata de la: ${getRealIp(req)}`);
         io.emit('devices_update', deviceManager.getAllDevices());
-        res.json({ success: true });
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                logger.error(`Session save failed (register passkey): ${saveErr.message}`);
+                return res.status(500).json({ success: false, error: 'Eroare server.' });
+            }
+            res.json({ success: true });
+        });
     } catch (e) { logger.error(`WebAuthn reg: ${e.message}`); res.status(400).json({ success: false, error: e.message }); }
 });
 
@@ -732,20 +1098,20 @@ app.post('/api/admops/webauthn/verify-authentication', webauthnVerifyLimiter, as
         const credIdBase64 = body.credential.id || body.credential.rawId;
         const cred = creds.find(c => c.credentialID === credIdBase64);
         if (!cred) return res.status(400).json({ success: false, error: 'Credential necunoscut. Inregistreaza mai intai un passkey folosind parola.' });
-        const siteUrl = process.env.SITE_URL || `http://localhost:${PORT}`;
-        const rpId = process.env.RP_ID || new URL(siteUrl).hostname;
+        const { expectedOrigin, rpId } = getWebAuthnContext(req);
         const expectedChallenge = req.session.webauthnChallenge;
         if (!expectedChallenge) return res.status(400).json({ success: false, error: 'Sesiune expirata. Reincearca.' });
         delete req.session.webauthnChallenge;
         const verification = await verifyAuthenticationResponse({
             response: body.credential,
             expectedChallenge,
-            expectedOrigin: siteUrl,
+            expectedOrigin,
             expectedRPID: rpId,
-            authenticator: {
-                credentialID: Buffer.from(cred.credentialID, 'base64url'),
-                credentialPublicKey: Buffer.from(cred.publicKey, 'base64url'),
-                counter: cred.counter,
+            // v9+: 'authenticator' renamed to 'credential'; fields renamed too
+            credential: {
+                id:         cred.credentialID,
+                publicKey:  new Uint8Array(Buffer.from(cred.publicKey, 'base64url')),
+                counter:    cred.counter,
                 transports: cred.transports
             }
         });
@@ -790,7 +1156,13 @@ app.post('/api/admops/webauthn/verify-authentication', webauthnVerifyLimiter, as
 
             io.emit('devices_update', deviceManager.getAllDevices());
 
-            res.json({ success: true });
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    logger.error(`Session save failed (passkey login): ${saveErr.message}`);
+                    return res.status(500).json({ success: false, error: 'Eroare server.' });
+                }
+                res.json({ success: true });
+            });
         });
     } catch (e) { logger.error(`WebAuthn auth: ${e.message}`); res.status(400).json({ success: false, error: e.message }); }
 });
@@ -963,6 +1335,172 @@ app.get('/api/admops/activity', requireAdm, (req, res) => {
         res.json({ success: true, activity: activityLog.getActivity(credId, limit) });
     } else {
         res.json({ success: true, activity: activityLog.getAllActivity(limit) });
+    }
+});
+
+app.get('/api/admops/telemetry/settings', requireAdm, (req, res) => {
+    res.json({ success: true, settings: readTelemetrySettings() });
+});
+
+app.put('/api/admops/telemetry/settings', requireAdm, (req, res) => {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const updates = {};
+    for (const k of Object.keys(DEFAULT_TELEMETRY_SETTINGS)) {
+        if (typeof body[k] === 'boolean') updates[k] = body[k];
+    }
+    const settings = saveTelemetrySettings({ ...readTelemetrySettings(), ...updates });
+    res.json({ success: true, settings });
+});
+
+app.get('/api/admops/telemetry/overview', requireAdm, (req, res) => {
+    try {
+        const events = readTelemetryEvents();
+        const today = telemetryDayKey(Date.now());
+        const eventsToday = events.filter(e =>
+            telemetryDayKey(e.serverTs || e.ts || Date.now()) === today
+            && e.event === 'page_view'  
+            && !((e.data && e.data.url) || '').includes('/admops')  
+            ).length;   
+        const lastSyncAt = events.length
+            ? new Date(events[events.length - 1].serverTs || events[events.length - 1].ts || Date.now()).toISOString()
+            : null;
+        const daily = telemetryProcessor.getDailySummary();
+        const todayVisits = daily.length ? (daily[daily.length - 1].visits || 0) : 0;
+        const byEvent = {};
+        const topPagesMap = {};
+        const topRefMap = {};
+        const sessions = new Set();
+        const sessions24h = new Set();
+        const now = Date.now();
+        const since24h = now - (24 * 60 * 60 * 1000);
+
+        let pageViews = 0;
+        let storefrontViews = 0;
+        let adminViews = 0;
+        let productViews = 0;
+        let cartAdds = 0;
+        let jsErrors = 0;
+        let timeOnPageTotal = 0;
+        let timeOnPageSamples = 0;
+
+        for (const e of events) {
+            const eventName = String(e.event || 'unknown');
+            byEvent[eventName] = (byEvent[eventName] || 0) + 1;
+
+            const sid = String(e.sessionId || '');
+            if (sid) {
+                sessions.add(sid);
+                const evTs = Number(e.serverTs || e.ts || 0);
+                if (evTs >= since24h) sessions24h.add(sid);
+            }
+
+            if (eventName === 'page_view') {
+                pageViews++;
+                const rawUrl = decodeTelemetryText(e.data && e.data.url);
+                if (rawUrl) {
+                    let label = rawUrl;
+                    try {
+                        const u = new URL(rawUrl);
+                        label = `${u.pathname}${u.search || ''}`;
+                    } catch (_) {}
+                    topPagesMap[label] = (topPagesMap[label] || 0) + 1;
+                    if (label.includes('/admops')) adminViews++;
+                    else storefrontViews++;
+                }
+                const rawRef = decodeTelemetryText(e.data && e.data.referrer).trim();
+                if (rawRef) {
+                    let refLabel = rawRef;
+                    try {
+                        const u = new URL(rawRef);
+                        refLabel = `${u.hostname}${u.pathname}`;
+                    } catch (_) {}
+                    topRefMap[refLabel] = (topRefMap[refLabel] || 0) + 1;
+                }
+            }
+            if (eventName === 'product_view') productViews++;
+            if (eventName === 'cart_add') cartAdds++;
+            if (eventName === 'js_error') jsErrors++;
+            if (eventName === 'time_on_page') {
+                const ms = safeTelemetryNumber(e.data && e.data.ms);
+                if (ms != null) {
+                    timeOnPageTotal += ms;
+                    timeOnPageSamples++;
+                }
+            }
+        }
+
+        const checkout = telemetryProcessor.getCheckoutFunnel();
+        const checkoutConversionRate = checkout.attempts > 0
+            ? Math.round((checkout.successes / checkout.attempts) * 1000) / 10
+            : null;
+        const addToCartRate = productViews > 0
+            ? Math.round((cartAdds / productViews) * 1000) / 10
+            : null;
+        const errorRate = pageViews > 0
+            ? Math.round((jsErrors / pageViews) * 1000) / 10
+            : null;
+        const avgTimeOnPageMs = timeOnPageSamples > 0
+            ? Math.round(timeOnPageTotal / timeOnPageSamples)
+            : null;
+
+        res.json({
+            success: true,
+            settings: readTelemetrySettings(),
+            overview: {
+                eventsToday,
+                todayVisits,
+                totalEvents: events.length,
+                lastSyncAt
+            },
+            dailySummary: telemetryProcessor.getDailySummary(),
+            topProducts: telemetryProcessor.getTopProducts(),
+            deviceBreakdown: telemetryProcessor.getDeviceBreakdown(),
+            countryBreakdown: telemetryProcessor.getCountryBreakdown(),
+            checkoutFunnel: checkout,
+            errorLog: telemetryProcessor.getErrorLog(20),
+            modelPerformance: (() => {
+                const base = telemetryProcessor.get3DPerformance();
+                const fpsMap = {};
+                for (const e of events) {
+                    if (e.event !== 'model_fps') continue;
+                    const dt  = String(e.data?.deviceType || 'desktop');
+                    const fps = Number(e.data?.avgFps) || 0;
+                    const n   = Number(e.data?.samples) || 1;
+                    if (!fps) continue;
+                    if (!fpsMap[dt]) fpsMap[dt] = { sum: 0, totalSamples: 0, count: 0 };
+                    fpsMap[dt].sum          += fps * n;
+                    fpsMap[dt].totalSamples += n;
+                    fpsMap[dt].count++;
+                }
+                base.fpsByDevice = Object.entries(fpsMap).map(([deviceType, v]) => ({
+                    deviceType,
+                    avgFps:  Math.round((v.sum / v.totalSamples) * 10) / 10,
+                    samples: v.totalSamples
+                }));
+                return base;
+            })(),
+            webVitals: telemetryProcessor.getWebVitals(),
+            insights: {
+                sessions: sessions.size,
+                activeSessions24h: sessions24h.size,
+                pageViews,
+                storefrontViews,
+                adminViews,
+                productViews,
+                cartAdds,
+                jsErrors,
+                avgTimeOnPageMs,
+                checkoutConversionRate,
+                addToCartRate,
+                errorRate,
+                topPages: toTopList(topPagesMap, 12),
+                topReferrers: toTopList(topRefMap, 8),
+                eventMix: toTopList(byEvent, 12)
+            }
+        });
+    } catch (e) {
+        logger.error(`telemetry overview: ${e.message}`);
+        res.status(500).json({ success: false, error: 'Nu am putut încărca telemetry.' });
     }
 });
 
@@ -1365,6 +1903,10 @@ async function shutdown(signal) {
         logger.info(`Server oprit. (${signal})`);
         process.exit(0);
     } catch (e) {
+        if (e && /Server is not running/i.test(String(e.message || ''))) {
+            logger.info(`Server deja oprit. (${signal})`);
+            process.exit(0);
+        }
         logger.error(`Eroare oprire: ${e.message}`);
         process.exit(1);
     }
@@ -1394,10 +1936,6 @@ process.stdin.on('data', chunk => {
 });
 
 io.on('connection', socket => {
-    logger.info(`WS client: ${socket.id}`);
-
-    // Client calls this after login so we know which device this socket belongs to.
-    // The socket is placed in room `device:{token}` — lets us target it on revocation.
     socket.on('register_device', (token) => {
         if (typeof token !== 'string' || token.length !== 64) return; // sanity check
         // Leave any previous device room before joining the new one
@@ -1414,11 +1952,9 @@ server.listen(PORT, () => {
     logger.banner('Luci Boutique', '6.2', [
         { key: 'Port',         val: PORT },
         { key: 'Environment',  val: process.env.NODE_ENV || 'development' },
-        { key: 'Data dir',     val: DIR_DATA },
-        { key: 'Uploads dir',  val: DIR_UPLOADS },
-        '---',
-        { key: 'VAPID',        val: VAPID_PUBLIC ? 'configured' : 'missing' },
-        { key: 'Email',        val: process.env.EMAIL_USER || 'not set' },
+        { key: 'Admin URL',    val: `http://localhost:${PORT}/admops` },
+        { key: 'Email',        val: process.env.EMAIL_USER ? 'configured' : 'not set' },
+        { key: 'Push (VAPID)', val: VAPID_PUBLIC ? 'configured' : 'disabled' },
     ]);
     logger.divider();
     console.log(`  ➜  Local:   http://localhost:${PORT}`);
