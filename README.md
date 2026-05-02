@@ -18,7 +18,7 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 | Showcase | Modal |
 | :---: | :---: |
 | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/Main.png" width="400" alt="Products"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/Modal.png" width="400" alt="Modal"> |
-| **3D Model**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/3d.png" width="400" alt="3D model"> |
+| **3D Model**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/3d.png" width="400" alt="3D model"> | |
 
 </details>
 
