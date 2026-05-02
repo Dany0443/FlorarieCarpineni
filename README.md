@@ -12,9 +12,10 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 - Cos persistent in localStorage
 
 <br>
+
 <details>
 <summary><strong style="font-size: 1.4em;">Screenshots from Main Website</strong></summary>
-<br>
+
 | Showcase | Modal |
 | :---: | :---: |
 | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/Main.png" width="400" alt="Products"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/Modal.png" width="400" alt="Modal"> |
