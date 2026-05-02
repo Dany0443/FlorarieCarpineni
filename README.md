@@ -27,12 +27,10 @@ Vanilla JS, fara frameworks.
 - Jurnalizare actiuni, log-uri cu rotatie automata
 - Pagina de Telemetrie, pentru a vedea informatii despre utilizatori.
 
-Some Images
-
-| Panou Telemetrie | Setari |
+| Panou Telemetrie Dark | Panou Telemetrie White |
 | :---: | :---: |
-| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Panou Telemetrie"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Magazin"> |
-  
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Panou Telemetrie"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Setari"> |
+| **Setari Dark**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbkst.png" width="400" alt="Magazin 3D"> | **Setari White**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhst.png" width="400" alt="Checkout"> |
 
 **Altele**
 - Romana, engleza, rusa
