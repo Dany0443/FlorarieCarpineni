@@ -27,6 +27,9 @@ Vanilla JS, fara frameworks.
 - Jurnalizare actiuni, log-uri cu rotatie automata
 - Pagina de Telemetrie, pentru a vedea informatii despre utilizatori.
 
+Some Images
+
+![Panou Telemetrie](./assets/docs/screenshotbktl.png)
   
 
 **Altele**
