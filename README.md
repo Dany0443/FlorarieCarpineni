@@ -12,6 +12,20 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 - Cos persistent in localStorage
 - Comanda cu email automat + factura PDF atasata
 
+<br>
+<details>
+<summary><strong style="font-size: 1.4em;">Screenshots from Main Website</strong></summary>
+<br>
+| Showcase | Modal |
+| :---: | :---: |
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Panou Telemetrie Dark"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Panou Telemetrie White"> |
+| **Setari Dark**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbkst.png" width="400" alt="Setari Dark"> | **Setari White**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhst.png" width="400" alt="Setari White"> |
+
+</details>
+
+<br>
+
+
 **Checkout**
 - Validare input pe client si server
 - Google Pay / Apple Pay prin PaymentRequest API (demo)
