@@ -25,11 +25,14 @@ Vanilla JS, fara frameworks.
 - Adaugare, editare, stergere produse + upload imagine
 - Gestiune dispozitive conectate — redenumire, revocare instant
 - Jurnalizare actiuni, log-uri cu rotatie automata
+- Pagina de Telemetrie, pentru a vedea informatii despre utilizatori.
+
+  
 
 **Altele**
 - Romana, engleza, rusa
 - Tema light / dark
-- PWA — se poate instala pe telefon, functioneaza offline partial
+- PWA - se poate instala pe telefon, functioneaza offline partial
 
 ---
 
