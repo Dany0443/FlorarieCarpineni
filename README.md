@@ -29,7 +29,7 @@ Vanilla JS, fara frameworks.
 
 Some Images
 
-![Panou Telemetrie](./assets/docs/screenshotbktl.png)
+![Panou Telemetrie](/public/assets/docs/screenshotbktl.png)
   
 
 **Altele**
