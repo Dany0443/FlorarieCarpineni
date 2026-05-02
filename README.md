@@ -29,7 +29,7 @@ Vanilla JS, fara frameworks.
 
 Some Images
 
-![Panou Telemetrie](/public/assets/docs/screenshotbktl.png)
+<img src="https://github.com/Dany0443/FlorarieCarpineni/public/assets/docs/screenshotbktl.png" width="700" alt="Panou Telemetrie">
   
 
 **Altele**
