@@ -31,6 +31,20 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 - Google Pay / Apple Pay prin PaymentRequest API (demo)
 - Confirmare comanda prin email cu PDF
 
+<br>
+
+<details>
+<summary><strong style="font-size: 1.4em;">Screenshots Checkout and mail</strong></summary>
+
+| Checkout | 1tap pay |
+| :---: | :---: |
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/check.png" width="400" alt="Products"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/1tap.png" width="400" alt="Modal"> |
+| **Mail**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/mail.png" width="400" alt="3D model"> | |
+
+</details>
+
+<br>
+
 **Admin** — la `/admops`
 - Login cu parola sau passkey (Face ID, fingerprint, Windows Hello)
 - Comenzi in timp real prin WebSocket + sunet la comanda noua
