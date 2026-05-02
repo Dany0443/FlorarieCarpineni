@@ -29,7 +29,7 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 <br>
 
 <details>
-<summary><h3>Screenshots from Admin page</h3></summary>
+<summary><strong style="font-size: 1.4em;">Screenshots from Admin page</strong></summary>
 
 <br>
 
