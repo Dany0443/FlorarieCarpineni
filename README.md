@@ -59,6 +59,7 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 | Real-time | Socket.io |
 | Email + PDF | Nodemailer + PDFKit |
 | Push | Web Push + VAPID |
+| Telemetry page | chart.js |  
 
 ---
 
