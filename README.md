@@ -10,7 +10,6 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 - Filtrare flori pe categorii, modal cu detalii si ingrijire
 - Vizualizare 3D la 360° (Google Model Viewer)
 - Cos persistent in localStorage
-- Comanda cu email automat + factura PDF atasata
 
 <br>
 <details>
@@ -18,8 +17,8 @@ Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambass
 <br>
 | Showcase | Modal |
 | :---: | :---: |
-| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Panou Telemetrie Dark"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Panou Telemetrie White"> |
-| **Setari Dark**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbkst.png" width="400" alt="Setari Dark"> | **Setari White**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhst.png" width="400" alt="Setari White"> |
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Products"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Modal"> |
+| **3D Model**<br><img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbkst.png" width="400" alt="3D model"> |
 
 </details>
 
