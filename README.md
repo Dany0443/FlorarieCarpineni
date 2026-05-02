@@ -29,7 +29,9 @@ Vanilla JS, fara frameworks.
 
 Some Images
 
-<img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="500" alt="Panou Telemetrie">
+| Panou Telemetrie | Setari |
+| :---: | :---: |
+| <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotbktl.png" width="400" alt="Panou Telemetrie"> | <img src="https://github.com/Dany0443/FlorarieCarpineni/blob/main/public/assets/docs/screenshotwhtl.png" width="400" alt="Magazin"> |
   
 
 **Altele**
