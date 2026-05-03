@@ -1,13 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-<<<<<<< HEAD
-
-const FILE_ACTIVITY = path.join(__dirname, 'data', 'activity.json');
-=======
 const secureStore = require('./secureStore');
 
 const FILE_ACTIVITY = path.join(__dirname, '..', 'data', 'activity.json');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 const ACTION_LABELS = {
     login:           'Autentificare reușită',
@@ -28,21 +23,12 @@ function ensureDataDir() {
 
 function readActivity() {
     ensureDataDir();
-<<<<<<< HEAD
-    try { return JSON.parse(fs.readFileSync(FILE_ACTIVITY, 'utf-8')); }
-    catch { return {}; }
-=======
     return secureStore.readJson(FILE_ACTIVITY, {});
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function saveActivity(data) {
     ensureDataDir();
-<<<<<<< HEAD
-    fs.writeFileSync(FILE_ACTIVITY, JSON.stringify(data, null, 2));
-=======
     secureStore.writeJson(FILE_ACTIVITY, data);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function logActivity(credId, action, details = {}) {
@@ -99,8 +85,4 @@ function getSummary(credId) {
     };
 }
 
-<<<<<<< HEAD
 module.exports = { logActivity, getActivity, getAllActivity, clearActivity, getSummary, ACTION_LABELS };
-=======
-module.exports = { logActivity, getActivity, getAllActivity, clearActivity, getSummary, ACTION_LABELS };
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

@@ -1,14 +1,9 @@
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
-<<<<<<< HEAD
-
-const FILE_DEVICES           = path.join(__dirname, 'data', 'devices.json');
-=======
 const secureStore = require('./secureStore');
 
 const FILE_DEVICES           = path.join(__dirname, '..', 'data', 'devices.json');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const DEVICE_COOKIE          = 'device_id';
 const DEVICE_COOKIE_MAX_AGE  = 365 * 24 * 60 * 60 * 1000; // 1 year — survives session expiry
 
@@ -21,21 +16,12 @@ function ensureDataDir() {
 
 function readDevices() {
     ensureDataDir();
-<<<<<<< HEAD
-    try { return JSON.parse(fs.readFileSync(FILE_DEVICES, 'utf-8')); }
-    catch { return []; }
-=======
     return secureStore.readJson(FILE_DEVICES, []);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function saveDevices(devices) {
     ensureDataDir();
-<<<<<<< HEAD
-    fs.writeFileSync(FILE_DEVICES, JSON.stringify(devices, null, 2));
-=======
     secureStore.writeJson(FILE_DEVICES, devices);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -235,8 +221,4 @@ module.exports = {
     getDeviceToken,
     detectDeviceName,
     DEVICE_COOKIE,
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

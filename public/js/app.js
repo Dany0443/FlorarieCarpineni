@@ -1,25 +1,10 @@
-<<<<<<< HEAD
-/**
- * LuciUI - Project Enhancements Module
- * Handles: Real Progress Loader, Scroll Reveals, Smart Header, Bottom Sheet, and View Transitions
- */
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const LuciUI = (function(window, document) {
     'use strict';
 
     let _scrollObserver = null;
 
-<<<<<<< HEAD
-    /**
-     * Loader with real asset progress
-     */
-=======
     
     // Loader with real asset progress
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     function initLoader() {
         const loader = document.getElementById('loader');
         if (!loader) return;
@@ -68,15 +53,9 @@ const LuciUI = (function(window, document) {
             });
     }
 
-<<<<<<< HEAD
-    /**
-     * Scroll Reveal Animations
-     */
-=======
     
     // Scroll Reveal Animations
      
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     function initScrollReveal() {
         if (_scrollObserver) _scrollObserver.disconnect();
 
@@ -87,11 +66,7 @@ const LuciUI = (function(window, document) {
                 const delay = Number(el.dataset.revealDelay || 0);
                 setTimeout(() => {
                     el.classList.add('is-visible', 'visible');
-<<<<<<< HEAD
-                    // Reset dynamic delay after reveal so later style changes (ex: theme)
-=======
                     // Reset dynamic delay after reveal so later style changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                     // are not artificially delayed.
                     el.style.transitionDelay = '0ms';
                     _scrollObserver.unobserve(el);
@@ -125,52 +100,12 @@ const LuciUI = (function(window, document) {
         return _scrollObserver;
     }
 
-<<<<<<< HEAD
-    /**
-     * Smart Header (Hide on scroll down, show on up)
-     */
-    function initSmartHeader() {
-        const navbar = document.querySelector('.navbar');
-        if (!navbar) return;
-
-        let lastScrollY = window.scrollY;
-        let ticking = false;
-
-        const updateHeader = () => {
-            const scrollY = window.scrollY;
-            const delta = scrollY - lastScrollY;
-
-            if (scrollY < 100) {
-                navbar.classList.remove('nav-hidden');
-            } else if (delta > 10) {
-                navbar.classList.add('nav-hidden');
-            } else if (delta < -15) {
-                navbar.classList.remove('nav-hidden');
-            }
-
-            lastScrollY = scrollY;
-            ticking = false;
-        };
-
-        window.addEventListener('scroll', () => {
-            if (!ticking) {
-                window.requestAnimationFrame(updateHeader);
-                ticking = true;
-            }
-        }, { passive: true });
-    }
-
-    /**
-     * Bottom Sheet for Mobile Settings
-     */
-=======
     
     
 
     
     //  Bottom Sheet for Mobile Settings
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     function initBottomSheet() {
         if (window.innerWidth > 1024) return;
 
@@ -280,13 +215,7 @@ const LuciUI = (function(window, document) {
 
     function init() {
         initLoader();
-<<<<<<< HEAD
-        initSmartHeader();
-        initScrollReveal();
-        initBottomSheet();
-=======
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
 
     return {
@@ -299,10 +228,6 @@ const LuciUI = (function(window, document) {
 
 document.addEventListener('DOMContentLoaded', () => LuciUI.init());
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 let preloadedModels = new Set();
 let allProducts = [];
 
@@ -404,11 +329,6 @@ function _stopFpsMeasureAndSend(deviceType) {
 let cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
 let currentCategory = 'all';
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function trackTelemetry(event, data) {
     try {
         if (window.Telemetry && typeof window.Telemetry.track === 'function') {
@@ -417,8 +337,6 @@ function trackTelemetry(event, data) {
     } catch (_) {}
 }
 
-<<<<<<< HEAD
-=======
 function readLocalJson(key) {
     try {
         const raw = localStorage.getItem(key);
@@ -593,8 +511,6 @@ async function loadStorefrontProducts() {
     return bundledProducts();
 }
 
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const forcedLang = urlParams.get('lang') || window.__shareLang;
@@ -612,24 +528,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 800);
 
-<<<<<<< Updated upstream
-    // tragem produsele proaspete de pe server
-    try {
-        const res  = await fetch('/api/products');
-        const data = await res.json();
-        if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
-            allProducts = data.products;
-        } else {
-            allProducts = typeof productsData !== 'undefined' ? [...productsData] : [];
-        }
-    } catch (err) {
-        console.warn('API Error, falling back to local data:', err);
-        allProducts = typeof productsData !== 'undefined' ? [...productsData] : [];
-    }
-=======
     // Produsele vin fresh doar cand expira lease-ul; altfel folosim cache/local fallback.
     allProducts = await loadStorefrontProducts();
->>>>>>> Stashed changes
 
     if(productContainer) {
         renderProducts('all');
@@ -665,79 +565,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 navigator.serviceWorker.ready.then(r => sendPreload(r.active));
             }
-<<<<<<< HEAD
-        }).catch(err => console.log('Eroare SW:', err));
-
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(perm => {
-                if (perm === 'granted') subscribePush();
-            }).catch(() => {});
-        } else if (Notification.permission === 'granted') {
-            subscribePush();
-        }
-    }
-
-    async function subscribePush() {
-        try {
-            const keyRes = await fetch('/api/vapid-key');
-            const keyData = await keyRes.json();
-            if (!keyData.publicKey) return;
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
-            });
-            await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sub.toJSON())
-            });
-        } catch (e) { console.warn('Push sub failed:', e); }
-    }
-
-    function urlBase64ToUint8Array(base64) {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-        let bits = 0, val = 0, output = [];
-        for (const c of base64) {
-            bits += 6; val = (val << 6) | chars.indexOf(c);
-            if (bits >= 8) { output.push((val >> (bits - 8)) & 0xFF); bits -= 8; }
-        }
-        return new Uint8Array(output);
-    }
-
-    updateCartUI();
-=======
-<<<<<<< Updated upstream
-        }).catch(() => {});
-    }
-
-    updateCartUI();
-    setupScrollAnimations();
-=======
         }).catch(err => console.log('Eroare SW:', err));
 
     }
 
     updateCartUI();
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     // setupScrollAnimations(); // Replaced by LuciUI.refreshReveal()
     initToggles();
     LuciUI.refreshReveal();
 
-<<<<<<< HEAD
-    const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('product');
-    if (productId) {
-        setTimeout(() => openModal(parseInt(productId, 10)), 300);
-    }
-=======
     const pathProductMatch = window.location.pathname.match(/^\/product\/(\d+)\/?$/);
     const productId = pathProductMatch?.[1] || urlParams.get('product') || window.__shareProductId;
     if (productId) {
         setTimeout(() => openModal(parseInt(productId, 10)), 300);
     }
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
     if (window.requestIdleCallback) {
         requestIdleCallback(() => preload3DModels(), { timeout: 3000 });
@@ -775,11 +616,6 @@ function preload3DModels() {
     }
 }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function initToggles() {
     const langSelectors = [document.getElementById('lang-selector'), document.getElementById('lang-selector-mobile')].filter(Boolean);
     const themeToggles = [document.getElementById('theme-toggle'), document.getElementById('theme-toggle-mobile')].filter(Boolean);
@@ -805,9 +641,6 @@ function initToggles() {
 
         // Re-render products to update their text if they exist
         if (typeof renderProducts === 'function' && allProducts.length > 0) {
-<<<<<<< HEAD
-            renderProducts(currentCategory);
-=======
             const category = currentCategory;
             currentCategory = null;
             renderProducts(category);
@@ -815,7 +648,6 @@ function initToggles() {
 
         if (modal?.classList.contains('active') && activeProductId) {
             openModal(activeProductId, false);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         }
     };
 
@@ -859,10 +691,6 @@ function initToggles() {
             toggle.setAttribute('data-active', isDark);
         });
         
-<<<<<<< HEAD
-        // Sync with any theme-pills (like in bottom sheet)
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         document.querySelectorAll('.theme-pill').forEach(pill => {
             pill.classList.toggle('active', isDark);
         });
@@ -899,10 +727,6 @@ function initToggles() {
     });
 }
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 if(menuBtn && closeMenuBtn) {
     menuBtn.addEventListener('click', () => mobileMenu.classList.add('active'));
     closeMenuBtn.addEventListener('click', () => mobileMenu.classList.remove('active'));
@@ -912,11 +736,6 @@ if(menuBtn && closeMenuBtn) {
     });
 }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function buildCardElement(product, cart) {
     const inCartItem = cart ? cart.find(i => i.id === product.id) : null;
     const btnText = inCartItem ? `${window.t?.('in_cart') ?? 'În Coș'} (${inCartItem.qty}) +` : (window.t?.('add_to_cart') ?? 'Adaugă în coș');
@@ -940,17 +759,11 @@ function buildCardElement(product, cart) {
   </div>`;
 
     const img = card.querySelector('img');
-<<<<<<< HEAD
-    img.src = product.image;
-=======
     img.src = versionedAssetUrl(product.image);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
     return card;
 }
 
-<<<<<<< HEAD
-=======
 function getProductText(product, field) {
     const key = `product_${product.id}_${field}`;
     if (typeof hasTranslation === 'function' && hasTranslation(key)) return t(key);
@@ -961,8 +774,6 @@ function getProductText(product, field) {
     return product[field] || '—';
 }
 
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function renderProducts(category) {
     if(!productContainer) return;
 
@@ -1010,13 +821,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 function openModal(id, fromUserGesture) {
     const product = allProducts.find(p => p.id === id);
     if(!product || !modal) return;
-<<<<<<< HEAD
-    if (fromUserGesture) {
-        trackTelemetry('product_view', { productId: String(product.id), productName: product.name, price: Number(product.price) || 0 });
-    }
-=======
-<<<<<<< Updated upstream
-=======
     activeProductId = id;
     const modalBox = modal.querySelector('.modal-content');
     const modalDetails = modal.querySelector('.modal-details');
@@ -1024,8 +828,6 @@ function openModal(id, fromUserGesture) {
     if (fromUserGesture) {
         trackTelemetry('product_view', { productId: String(product.id), productName: product.name, price: Number(product.price) || 0 });
     }
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
     modalImg.src = versionedAssetUrl(product.image);
     modalImg.alt = product.name;
@@ -1050,31 +852,18 @@ function openModal(id, fromUserGesture) {
         document.querySelector('.modal-text-block')?.appendChild(btn3d);
     }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const shareBtn = document.createElement('button');
     shareBtn.className = 'btn-share';
     shareBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
     shareBtn.onclick = () => {
-<<<<<<< HEAD
-        const shareUrl = `${window.location.origin}/?product=${product.id}`;
-=======
         const lang = ['ro', 'en', 'ru'].includes(window.__lang) ? window.__lang : 'ro';
         const shareUrl = `${window.location.origin}/product/${product.id}?lang=${lang}`;
         const shareText = `${product.name} - ${product.price} MDL\n${getProductText(product, 'desc')}`;
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
         if (navigator.share) {
             navigator.share({
                 title: product.name,
-<<<<<<< HEAD
-                text: `${product.name} - ${product.price} MDL`,
-=======
                 text: shareText,
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                 url: shareUrl
             }).catch(() => {
                 navigator.clipboard?.writeText(shareUrl);
@@ -1087,10 +876,6 @@ function openModal(id, fromUserGesture) {
     };
     document.querySelector('.modal-actions-row')?.appendChild(shareBtn);
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const inCartItem = cart.find(item => item.id === product.id);
     modalAddBtn.innerText = inCartItem ? `${t('modal_add_more')} (${inCartItem.qty})` : t('modal_add');
 
@@ -1123,14 +908,6 @@ function openModal(id, fromUserGesture) {
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
-<<<<<<< HEAD
-
-    const shareUrl = new URL(window.location.href);
-    shareUrl.searchParams.set('product', product.id);
-    window.history.replaceState({}, '', shareUrl);
-=======
-<<<<<<< Updated upstream
-=======
 
     const pageUrl = new URL(window.location.href);
     const lang = ['ro', 'en', 'ru'].includes(window.__lang) ? window.__lang : 'ro';
@@ -1143,8 +920,6 @@ function openModal(id, fromUserGesture) {
         pageUrl.searchParams.set('lang', lang);
     }
     window.history.replaceState({}, '', pageUrl);
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function closeModal() {
@@ -1152,16 +927,6 @@ function closeModal() {
     activeProductId = null;
     modal.classList.remove('active');
     document.body.style.overflow = '';
-<<<<<<< HEAD
-
-    const url = new URL(window.location.href);
-    if (url.searchParams.has('product')) {
-        url.searchParams.delete('product');
-        window.history.replaceState({}, '', url);
-    }
-=======
-<<<<<<< Updated upstream
-=======
 
     const url = new URL(window.location.href);
     if (url.pathname.match(/^\/product\/\d+\/?$/)) {
@@ -1172,8 +937,6 @@ function closeModal() {
         const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
         window.history.replaceState({}, '', cleanUrl || '/');
     }
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function resetViewer() {
@@ -1225,14 +988,8 @@ async function esteInCache(url) {
 
 function open3DModal(modelPath) {
     if (!modal3D || !modelViewer) return;
-<<<<<<< HEAD
-    const product = allProducts.find(p => p.model3d === modelPath);
-=======
-<<<<<<< Updated upstream
-=======
     const product = allProducts.find(p => p.model3d === modelPath);
     const modelUrl = versionedAssetUrl(modelPath);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const loadStartedAt = Date.now();
     const deviceType = PE_MOBIL ? 'mobile' : 'desktop';
     trackTelemetry('model_load_start', {
@@ -1240,10 +997,6 @@ function open3DModal(modelPath) {
         productName: product ? product.name : 'Unknown',
         deviceType
     });
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
     const modelWrapper = document.querySelector('.model-wrapper');
 

@@ -170,16 +170,6 @@ textarea {
   justify-content: center;
 }
 
-<<<<<<< HEAD
-.navbar.nav-hidden,
-.navbar.nav-visible {
-  transform: none;
-}
-
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 [data-theme="dark"] .navbar {
   background: rgba(14, 13, 12, 0.85);
 }
@@ -513,10 +503,6 @@ textarea {
   }
 }
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 .nav-container {
   width: 90%;
   max-width: 1200px;

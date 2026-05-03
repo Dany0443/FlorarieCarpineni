@@ -13,13 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-        function sanitizeText(str, maxLen) {
-            return String(str).trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, maxLen);
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const total = parseFloat(cart.reduce((acc, item) => acc + (item.price * item.qty), 0).toFixed(2));
     document.getElementById('checkout-total').innerText = total + ' MDL';
 
@@ -34,8 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
         catch { return fallback; }
     }
 
-<<<<<<< HEAD
-=======
     let nativePayLabel = safeT('btn_native_pay', 'Plateste rapid');
 
     function getNativePayProfile() {
@@ -100,16 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
             : [googlePay, applePay];
     }
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     window.onLangChange = function () {
         const submitBtn    = document.getElementById('submitBtn');
         const nativePayBtn = document.getElementById('native-pay-btn');
         if (submitBtn)    submitBtn.textContent    = safeT('btn_submit',     'Trimite comanda');
-<<<<<<< HEAD
-        if (nativePayBtn) nativePayBtn.textContent = safeT('btn_native_pay', 'Plătește rapid');
-=======
         if (nativePayBtn) nativePayBtn.textContent = nativePayLabel || safeT('btn_native_pay', 'Plateste rapid');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     };
 
     // ── helpers ───────────────────────────────────────────────────────────────
@@ -141,10 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return await fetch(url, { ...opts, signal: ctrl.signal });
         } finally {
             clearTimeout(timer);
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         }
     }
 
@@ -242,19 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-<<<<<<< HEAD
-    initPaymentButton(cart, total);
-
-    // ── native payment (Google Pay / Apple Pay) ───────────────────────────────
-=======
-<<<<<<< Updated upstream
-        window.addEventListener('load', () => {
-            document.getElementById('loader').classList.add('hidden');
-=======
     initPaymentButton(cart, total);
 
     // native pay button flow using Payment Request API
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     function initPaymentButton(cart, total) {
         const nativePayBtn = document.getElementById('native-pay-btn');
         if (!nativePayBtn) return;
@@ -263,59 +235,17 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('PaymentRequest API indisponibil (lipsă HTTPS sau browser nesuportat).');
             return;
         }
-<<<<<<< HEAD
-        nativePayBtn.style.display = 'block';
-        trackTelemetry('payment_method_shown', { method: 'native_pay' });
-
-        const supportedInstruments = [
-            {
-                supportedMethods: 'https://google.com/pay',
-                data: {
-                    environment: 'TEST',
-                    apiVersion: 2,
-                    apiVersionMinor: 0,
-                    merchantInfo: { merchantName: 'Luci Boutique' },
-                    allowedPaymentMethods: [{
-                        type: 'CARD',
-                        parameters: {
-                            allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
-                            allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX']
-                        },
-                        tokenizationSpecification: {
-                            type: 'PAYMENT_GATEWAY',
-                            parameters: { gateway: 'example', gatewayMerchantId: 'demoGatewayId' }
-                        }
-                    }]
-                }
-            },
-            {
-                supportedMethods: 'https://apple.com/apple-pay',
-                data: {
-                    version: 3,
-                    merchantIdentifier: 'merchant.com.florariecarpineni.com',
-                    merchantCapabilities: ['supports3DS'],
-                    supportedNetworks: ['masterCard', 'visa', 'amex'],
-                    countryCode: 'MD'
-                }
-            }
-        ];
-=======
         const payProfile = getNativePayProfile();
         setNativePayLabel(nativePayBtn, payProfile);
         nativePayBtn.style.display = 'block';
         trackTelemetry('payment_method_shown', { method: payProfile.method });
 
         const supportedInstruments = getPaymentInstruments(payProfile);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
         nativePayBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             nativePayBtn.disabled = true;
-<<<<<<< HEAD
-            trackTelemetry('native_pay_attempt', { cartItems: cart.length, total });
-=======
             trackTelemetry('native_pay_attempt', { method: payProfile.method, cartItems: cart.length, total });
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
             const displayItems = cart.map(item => ({
                 label:  item.name,
@@ -407,11 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // User dismissed the sheet — silent
                 } else if (err.name === 'NotSupportedError') {
                     showFeedback('error',
-<<<<<<< HEAD
-                        'Apple Pay / Google Pay nu sunt disponibile în modul demo.<br>' +
-=======
                         `${payProfile.label} nu este disponibil în modul demo pe acest device.<br>` +
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                         'Completați formularul standard de mai jos.'
                     );
                 } else if (err.name !== 'AbortError') {
@@ -421,10 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 nativePayBtn.disabled = false;
             }
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         });
     }
 });

@@ -1,10 +1,7 @@
 const CACHE_NAME  = 'luci-v4';
 const IMG_CACHE   = 'luci-images-v2';
 const ADMIN_CACHE = 'luci-admin-v3';
-<<<<<<< HEAD
-=======
 const MODEL_CACHE = 'lb-modele-3d-v1';
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 const PRECACHE_ASSETS = [
     '/',
@@ -37,11 +34,7 @@ self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys =>
             Promise.all(
-<<<<<<< HEAD
-                keys.filter(k => ![CACHE_NAME, IMG_CACHE, ADMIN_CACHE].includes(k))
-=======
                 keys.filter(k => ![CACHE_NAME, IMG_CACHE, ADMIN_CACHE, MODEL_CACHE].includes(k))
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                     .map(k => caches.delete(k))
             )
         ).then(() => self.clients.claim())
@@ -54,14 +47,11 @@ self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
     if (!url.protocol.startsWith('http')) return;
 
-<<<<<<< HEAD
-=======
     if (url.pathname.startsWith('/api/')) {
         e.respondWith(fetch(e.request));
         return;
     }
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     if (url.pathname.endsWith('.html') || url.pathname.endsWith('.json') || url.pathname.match(/\.(js|css)(\?|$)/)) {
         e.respondWith(
             fetch(e.request, { cache: 'no-cache' })
@@ -147,15 +137,6 @@ self.addEventListener('notificationclick', e => {
 });
 
 self.addEventListener('message', async e => {
-<<<<<<< HEAD
-    if (e.data?.type === 'PRELOAD_IMAGES' && Array.isArray(e.data.urls)) {
-        const cache = await caches.open(IMG_CACHE);
-        const fetchPromises = e.data.urls.map(async url => {
-            const hit = await cache.match(url);
-            if (!hit) {
-                try {
-                    const res = await fetch(url);
-=======
     if (e.data?.type === 'CLEAR_STOREFRONT_CACHES') {
         await Promise.all([
             caches.delete(IMG_CACHE),
@@ -172,15 +153,10 @@ self.addEventListener('message', async e => {
             if (!hit || refresh) {
                 try {
                     const res = await fetch(new Request(url, { cache: refresh ? 'reload' : 'default' }));
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                     if (res.ok) await cache.put(url, res);
                 } catch (err) {}
             }
         });
         await Promise.all(fetchPromises);
     }
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

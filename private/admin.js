@@ -4,10 +4,7 @@ let conditionalAbortController = null;
 
 const toBase64Url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 const b64urlToBuffer = b64url => { if (!b64url) return null; const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/'); const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='); return Uint8Array.from(atob(padded), c => c.charCodeAt(0)); };
-<<<<<<< HEAD
-=======
 const urlBase64ToUint8Array = b64urlToBuffer;
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 function getSoundVolume() {
     const v = parseFloat(localStorage.getItem('admin_sound_vol'));
@@ -181,22 +178,16 @@ async function initAdmin() {
     try {
         const r = await fetch('/api/admops/orders', { credentials: 'include' });
         if (r.status === 401) { redirectToLogin(); }
-<<<<<<< HEAD
-        else { showAdmin(); }
-=======
         else {
             showAdmin();
             initAdminPushNotifications();
         }
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch { redirectToLogin(); }
     finally {
         if (loader) { loader.classList.add('hidden'); setTimeout(() => loader.remove(), 520); }
     }
 }
 
-<<<<<<< HEAD
-=======
 async function initAdminPushNotifications() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
     if (Notification.permission === 'denied') return;
@@ -230,7 +221,6 @@ async function initAdminPushNotifications() {
     }
 }
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAdmin);
 } else {
@@ -2049,8 +2039,4 @@ if (adminThemeToggle) {
         localStorage.setItem('admin_theme', newTheme);
         adminThemeToggle.setAttribute('data-active', isDark ? 'false' : 'true');
     });
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

@@ -1,37 +1,12 @@
-<<<<<<< HEAD
-// rewrite the entire server.js Vs6.2
-
-
-if (!globalThis.crypto) { globalThis.crypto = require('crypto').webcrypto; }
-=======
-<<<<<<< Updated upstream
-// rewrite the entire server.js V4 speram ca de data asta merge cum trebu
-// patch 4.4
-
-=======
 // serverV variable is the version of the server.
 let serverV = 6.5;
 
 if (!globalThis.crypto) { globalThis.crypto = require('crypto').webcrypto; }
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 require('dotenv').config();
 
 const http = require('http');
 const express = require('express');
 const nodemailer = require('nodemailer');
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-const cors       = require('cors');
-const path       = require('path');
-const fs         = require('fs');
-const crypto     = require('crypto');
-const readline   = require('readline');
-const multer     = require('multer');
-const app  = express();
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -44,20 +19,12 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const webpush = require('web-push');
 const cookieParser  = require('cookie-parser');
-<<<<<<< HEAD
-const bcrypt = require('bcrypt');
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const activityLog   = require('./ext/activityLog');
 const deviceManager = require('./ext/deviceManager');
 const telemetryProcessor = require('./ext/telemetryProcessor');
 const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } = require('@simplewebauthn/server');
 const { isoBase64URL, isoBase64ToBuffer, isoUint8ArrayToBase64 } = require('@simplewebauthn/server/helpers');
 const app = express();
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const PORT = process.env.PORT || 3000;
 const DIR_DATA      = path.join(__dirname, 'data');
 const DIR_PUBLIC    = path.join(__dirname, 'public');
@@ -66,21 +33,13 @@ const DIR_UPLOADS   = path.join(DIR_PUBLIC, 'uploads');
 const FILE_ORDERS   = path.join(DIR_DATA, 'orders.json');
 const FILE_LOGS     = path.join(DIR_DATA, 'server.log');
 const FILE_PRODUCTS = path.join(DIR_PUBLIC, 'js', 'products.js');
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
 const FILE_I18N     = path.join(DIR_PUBLIC, 'js', 'i18n.js');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const FILE_CREDS    = path.join(DIR_DATA, 'credentials.json');
 const FILE_PUSH     = path.join(DIR_DATA, 'push-subscriptions.json');
 const FILE_TELEMETRY = path.join(DIR_DATA, 'telemetry.json');
 const FILE_TELEMETRY_SETTINGS = path.join(DIR_DATA, 'telemetry-settings.json');
 const Logger = require('./ext/logger');
-<<<<<<< HEAD
-=======
 const secureStore = require('./ext/secureStore');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const logger = new Logger(DIR_DATA);
 const MAX_TELEMETRY_EVENTS = 20000;
 const DEFAULT_TELEMETRY_SETTINGS = {
@@ -91,10 +50,7 @@ const DEFAULT_TELEMETRY_SETTINGS = {
     td3: true,
     checkout: true
 };
-<<<<<<< HEAD
-=======
 const ASSET_LEASE_MS = 30 * 60 * 1000;
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC  || '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
@@ -103,20 +59,6 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 }
 
 function readPushSubs() {
-<<<<<<< HEAD
-    try { return JSON.parse(fs.readFileSync(FILE_PUSH, 'utf-8')); }
-    catch { return []; }
-}
-
-function savePushSubs(subs) {
-    fs.writeFileSync(FILE_PUSH, JSON.stringify(subs, null, 2));
-}
-
-async function sendPushNotification(orderId, status) {
-    const subs = readPushSubs();
-    if (!subs.length) return;
-    const titles = {
-=======
     return secureStore.readJson(FILE_PUSH, []);
 }
 
@@ -129,16 +71,12 @@ async function sendPushNotification(orderId, status) {
     if (!subs.length) return;
     const titles = {
         new_order: 'Comanda noua',
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         preparing: 'Comanda in pregatire',
         shipped: 'Comanda a fost expediata',
         delivered: 'Comanda a fost livrata!'
     };
     const bodies = {
-<<<<<<< HEAD
-=======
         new_order: `A intrat o comanda noua: #${orderId}.`,
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         preparing: `Comanda #${orderId} este acum in pregatire. Vom lua legatura cu tine curand.`,
         shipped: `Comanda #${orderId} a plecat spre tine! Curand o vei primi.`,
         delivered: `Comanda #${orderId} a fost livrata cu succes! Florile au ajuns in siguranta.`
@@ -149,11 +87,7 @@ async function sendPushNotification(orderId, status) {
         icon: '/assets/favicon.svg',
         badge: '/assets/favicon.svg',
         tag: `order-${orderId}`,
-<<<<<<< HEAD
-        data: { orderId, status, url: '/' }
-=======
         data: { orderId, status, url: '/admops' }
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     });
     const results = await Promise.allSettled(
         subs.map(sub => webpush.sendNotification(sub, payload).catch(() => null))
@@ -164,24 +98,10 @@ async function sendPushNotification(orderId, status) {
         if (validSubs.length < subs.length) { savePushSubs(validSubs); logger.info(`Push: ${failed} subs expirati eliminati`); }
     }
 }
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 for (const dir of [DIR_DATA, DIR_UPLOADS]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
-<<<<<<< Updated upstream
-if (!fs.existsSync(FILE_ORDERS)) fs.writeFileSync(FILE_ORDERS, '[]');
-if (!fs.existsSync(FILE_LOGS))   fs.writeFileSync(FILE_LOGS, '');
-<<<<<<< HEAD
-if (!fs.existsSync(FILE_CREDS))  fs.writeFileSync(FILE_CREDS, '[]');
-if (!fs.existsSync(FILE_PUSH))   fs.writeFileSync(FILE_PUSH, '[]');
-if (!fs.existsSync(FILE_TELEMETRY)) fs.writeFileSync(FILE_TELEMETRY, '[]');
-if (!fs.existsSync(FILE_TELEMETRY_SETTINGS)) fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(DEFAULT_TELEMETRY_SETTINGS, null, 2));
-=======
-=======
 
 function ensureJsonFile(filePath, fallback) {
     if (secureStore.encryptionEnabled()) {
@@ -199,8 +119,6 @@ ensureJsonFile(FILE_TELEMETRY, []);
 ensureJsonFile(FILE_TELEMETRY_SETTINGS, DEFAULT_TELEMETRY_SETTINGS);
 ensureJsonFile(path.join(DIR_DATA, 'devices.json'), []);
 ensureJsonFile(path.join(DIR_DATA, 'activity.json'), {});
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 
 function escHtml(s) {
@@ -224,13 +142,6 @@ function sanitize(val, maxLen) {
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-function isValidEmail(email) {
-    return /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(email);
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function validateName(val) {
     return /^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s\-\.\']+$/.test(String(val ?? '').trim()) && String(val).trim().length >= 2;
 }
@@ -317,17 +228,8 @@ function getCountryFromReq(req) {
 }
 
 function readTelemetryEvents() {
-<<<<<<< HEAD
-    try {
-        const data = JSON.parse(fs.readFileSync(FILE_TELEMETRY, 'utf-8'));
-        return Array.isArray(data) ? data : [];
-    } catch {
-        return [];
-    }
-=======
     const data = secureStore.readJson(FILE_TELEMETRY, []);
     return Array.isArray(data) ? data : [];
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function appendTelemetryEvents(events) {
@@ -337,36 +239,19 @@ function appendTelemetryEvents(events) {
     const trimmed = existing.length > MAX_TELEMETRY_EVENTS
         ? existing.slice(existing.length - MAX_TELEMETRY_EVENTS)
         : existing;
-<<<<<<< HEAD
-    fs.writeFileSync(FILE_TELEMETRY, JSON.stringify(trimmed, null, 2));
-=======
     secureStore.writeJson(FILE_TELEMETRY, trimmed);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     telemetryProcessor.invalidate();
     return events.length;
 }
 
 function readTelemetrySettings() {
-<<<<<<< HEAD
-    try {
-        const raw = JSON.parse(fs.readFileSync(FILE_TELEMETRY_SETTINGS, 'utf-8'));
-        return { ...DEFAULT_TELEMETRY_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
-    } catch {
-        return { ...DEFAULT_TELEMETRY_SETTINGS };
-    }
-=======
     const raw = secureStore.readJson(FILE_TELEMETRY_SETTINGS, DEFAULT_TELEMETRY_SETTINGS);
     return { ...DEFAULT_TELEMETRY_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function saveTelemetrySettings(next) {
     const merged = { ...DEFAULT_TELEMETRY_SETTINGS, ...next };
-<<<<<<< HEAD
-    fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(merged, null, 2));
-=======
     secureStore.writeJson(FILE_TELEMETRY_SETTINGS, merged);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     return merged;
 }
 
@@ -393,10 +278,6 @@ function toTopList(mapObj, limit = 8) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit)
         .map(([label, value]) => ({ label, value }));
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function readProducts() {
@@ -579,50 +460,6 @@ const STORE_EMAIL = process.env.STORE_EMAIL || process.env.EMAIL_USER;
 // trebuie sa fie pe enviroment usr si pass.
 const ADMIN_USER      = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS      = process.env.ADMIN_PASS || 'admin1132';
-<<<<<<< HEAD
-const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || '';
-const BCRYPT_HASH_RE  = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
-
-// Fix 1: SESSION_SECRET must be stable across restarts.
-// If it's missing from .env, every server restart signs out ALL active sessions.
-if (!process.env.SESSION_SECRET) {
-    process.stderr.write(
-        '\n⚠️  WARNING: SESSION_SECRET is not set in .env!\n' +
-        '   Sessions will be invalidated on every server restart.\n' +
-        '   Add to .env:  SESSION_SECRET=' + require('crypto').randomBytes(64).toString('hex') + '\n\n'
-    );
-}
-const SESSION_SECRET  = process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
-const RATE_WINDOW_MS  = 60 * 1000;
-const RATE_MAX        = 5;
-
-=======
-<<<<<<< Updated upstream
-const sessions        = new Map();
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
-const loginAttempts   = new Map();
-const contactCooldown = new Map();
-
-function readCreds() {
-    try { return JSON.parse(fs.readFileSync(FILE_CREDS, 'utf-8')); }
-    catch { return []; }
-}
-
-function saveCreds(creds) {
-    fs.writeFileSync(FILE_CREDS, JSON.stringify(creds, null, 2));
-}
-
-function genToken() { return crypto.randomBytes(32).toString('hex'); }
-
-<<<<<<< HEAD
-=======
-// protejam rutele daca nu i administrator
-function requireAdmin(req, res, next) {
-    // Permitem si formatul x-admin-token si formatul Authorization Bearer
-    let token = req.headers['x-admin-token'];
-    if (!token && req.headers['authorization']) {
-        token = req.headers['authorization'].split(' ')[1];
-=======
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || '';
 const BCRYPT_HASH_RE  = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 let bcrypt = null;
@@ -658,24 +495,15 @@ function saveCreds(creds) {
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 async function verifyAdminPassword(password) {
     const configuredHash = ADMIN_PASS_HASH || (BCRYPT_HASH_RE.test(ADMIN_PASS) ? ADMIN_PASS : '');
     if (configuredHash) {
         try {
-<<<<<<< HEAD
-            return await bcrypt.compare(password, configuredHash);
-=======
             return await getBcrypt().compare(password, configuredHash);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         } catch (err) {
             logger.error(`bcrypt compare failed: ${err.message}`);
             return false;
         }
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
     return password === ADMIN_PASS;
 }
@@ -684,15 +512,6 @@ function requireAdm(req, res, next) {
     if (!req.session || !req.session.authenticated) {
         return res.status(401).json({ success: false, error: 'Unauthorized.' });
     }
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-    const s = sessions.get(token);
-    if (Date.now() > s.expires) {
-        sessions.delete(token);
-        return res.status(401).json({ success: false, error: 'Sesiune expirata.' });
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     // Re-hydrate device record if it went missing (e.g. server restart cleared in-memory state).
     // Only hard-block if the device was explicitly revoked via revokeDevice().
     const deviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req);
@@ -713,20 +532,10 @@ function requireAdm(req, res, next) {
         if (Date.now() - req.session.lastPasskeyAuth < passkeyGracePeriod) {
             return next();
         }
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
     next();
 }
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-// limitam incercarile de login sa nu scaneze parole
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function requireAdmPage(req, res, next) {
     if (!req.session || !req.session.authenticated) {
         return res.redirect(302, '/login');
@@ -772,10 +581,6 @@ const webauthnOptionsLimiter = rateLimit({
     message: { success: false, error: 'Prea multe cereri. Asteptati un minut.' }
 });
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function checkBrute(ip) {
     const now = Date.now();
     const e   = loginAttempts.get(ip) || { count: 0, first: now };
@@ -829,12 +634,6 @@ const upload = multer({
     }
 });
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-app.use(cors());
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const FileStore = require('session-file-store')(session);
 const sessionsDir = path.join(DIR_DATA, 'sessions');
 if (!fs.existsSync(sessionsDir)) {
@@ -901,11 +700,7 @@ const normalizedSiteUrl = normalizeSiteUrl(process.env.SITE_URL, `http://localho
 const isHttpsSite = normalizedSiteUrl.startsWith('https://');
 app.set('trust proxy', 1);
 
-<<<<<<< HEAD
-app.use(session({
-=======
 const sessionMiddleware = session({
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -925,22 +720,14 @@ const sessionMiddleware = session({
         // No default maxAge — session cookie by default; login sets it per rememberMe choice
     },
     name: 'admin_sid'
-<<<<<<< HEAD
-}));
-=======
 });
 app.use(sessionMiddleware);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.use(cors({
     origin: process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
         : [`http://localhost:${PORT}`],
     credentials: true
 }));
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 
@@ -962,21 +749,11 @@ app.use('/api/admops', (req, res, next) => {
 app.use(express.static(DIR_PUBLIC, {
     maxAge: 0,
     setHeaders(res, filePath) {
-<<<<<<< HEAD
-        if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
-            res.setHeader('Cache-Control', 'no-cache');
-        }
-=======
-<<<<<<< Updated upstream
-        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-=======
         if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.json') || /\.(js|css)$/i.test(filePath)) {
             res.setHeader('Cache-Control', 'no-cache');
         } else if (/\.(avif|webp|png|jpe?g|svg|gif|glb|gltf)$/i.test(filePath)) {
             res.setHeader('Cache-Control', 'public, max-age=86400');
         }
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
 }));
 
@@ -986,142 +763,6 @@ app.use(express.static(DIR_PUBLIC, {
 app.get('/',         (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'index.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'checkout.html')));
 app.get('/contact',  (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'contact.html')));
-<<<<<<< HEAD
-app.get('/product/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const products = readProducts();
-    const p = products.find(x => x.id === id && x.listed !== false);
-    if (!p) return res.status(404).sendFile(path.join(DIR_PUBLIC, 'index.html'));
-    const siteUrl = process.env.SITE_URL || `http://localhost:${PORT}`;
-    const productUrl = `${siteUrl}/product/${p.id}`;
-    const imagePath = String(p.image || '');
-    const imgUrl = !imagePath ? ''
-        : (/^https?:\/\//i.test(imagePath) ? imagePath : `${siteUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`);
-    const ogTitle = `${p.name} — ${p.price} MDL | Luci Boutique`;
-    const ogDesc = p.desc || `Comanda ${p.name} de la Luci Boutique. Livrare rapida in Carpineni, Moldova.`;
-    const html = `<!DOCTYPE html>
-<html lang="ro">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>${escHtml(ogTitle)}</title>
-    <meta name="description" content="${escHtml(ogDesc)}">
-    <meta property="og:title" content="${escHtml(ogTitle)}">
-    <meta property="og:description" content="${escHtml(ogDesc)}">
-    <meta property="og:image" content="${imgUrl}">
-    <meta property="og:url" content="${productUrl}">
-    <meta property="og:type" content="product">
-    <meta property="og:locale" content="ro_MD">
-    <meta property="product:price:amount" content="${p.price}">
-    <meta property="product:price:currency" content="MDL">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${escHtml(ogTitle)}">
-    <meta name="twitter:description" content="${escHtml(ogDesc)}">
-    <meta name="twitter:image" content="${imgUrl}">
-    <link rel="canonical" href="${productUrl}">
-    <meta name="view-transition" content="same-origin">
-    <link rel="icon" type="image/png" href="${siteUrl}/assets/favicon.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${siteUrl}/css/style.css">
-    <link rel="manifest" href="${siteUrl}/manifest.json">
-    <meta name="theme-color" content="#aa0132">
-    <script>
-        (function() {
-            const savedLang = localStorage.getItem('lb_lang') || 'ro';
-            const savedTheme = localStorage.getItem('lb_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.lang = savedLang;
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        })();
-    </script>
-</head>
-<body>
-    <div id="loader">
-        <div class="loader-content">
-            <svg class="loader-flower" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-                <g transform="translate(256,256)">
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)"/>
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(60)"/>
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(120)"/>
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(180)"/>
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(240)"/>
-                    <ellipse cx="0" cy="-82" rx="43" ry="64" fill="var(--primary)" transform="rotate(300)"/>
-                    <circle cx="0" cy="0" r="47" fill="var(--primary)"/>
-                    <circle cx="0" cy="0" r="26" fill="var(--bg-color)"/>
-                </g>
-            </svg>
-            <div class="loader-text">Luci Boutique.</div>
-        </div>
-    </div>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="logo">Luci Boutique.</a>
-            <div class="nav-links">
-                <a href="/" data-i18n="nav_home">Acasa</a>
-                <a href="/#shop" data-i18n="nav_collection">Colectie</a>
-                <a href="/contact.html" data-i18n="nav_contact">Contact</a>
-            </div>
-            <div class="toggles-container">
-                <div class="lang-selector" id="lang-selector">
-                    <div class="lang-option" data-lang="ro">RO</div>
-                    <div class="lang-option" data-lang="en">EN</div>
-                    <div class="lang-option" data-lang="ru">RU</div>
-                    <div class="lang-slider"></div>
-                </div>
-                <div class="toggle-wrapper" id="theme-toggle" aria-label="Schimba tema / Change theme">
-                    <span class="toggle-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
-                    <div class="toggle-slider"><div class="toggle-thumb"></div></div>
-                    <span class="toggle-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-                </div>
-            </div>
-            <div class="nav-icons">
-                <button id="menu-btn" class="icon-btn mobile-only" aria-label="Deschide meniul">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-            </div>
-        </div>
-    </nav>
-    <div class="mobile-menu">
-        <button class="close-menu">✕</button>
-        <div class="mobile-nav-top">
-            <div class="lang-selector" id="lang-selector-mobile">
-                <div class="lang-option" data-lang="ro">RO</div>
-                <div class="lang-option" data-lang="en">EN</div>
-                <div class="lang-option" data-lang="ru">RU</div>
-                <div class="lang-slider"></div>
-            </div>
-            <div class="toggle-wrapper" id="theme-toggle-mobile" aria-label="Schimba tema / Change theme">
-                <span class="toggle-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
-                <div class="toggle-slider"><div class="toggle-thumb"></div></div>
-                <span class="toggle-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-            </div>
-        </div>
-        <div class="mobile-nav-links">
-            <a href="/">Acasa</a>
-            <a href="/#shop">Colectie</a>
-            <a href="/contact.html">Contact</a>
-        </div>
-    </div>
-    <div style="max-width:900px;margin:0 auto;padding:120px 24px 60px;text-align:center;">
-        <img src="${escHtml(p.image)}" alt="${escHtml(p.name)}" style="max-width:340px;width:100%;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.25);" onerror="this.style.display='none'">
-        <h1 style="font-family:var(--font-heading);font-size:2.4rem;margin:1.5rem 0 0.5rem;color:var(--text-main);">${escHtml(p.name)}</h1>
-        <p style="font-size:1.5rem;color:var(--primary);font-weight:600;margin-bottom:1rem;">${p.price} MDL</p>
-        <p style="color:var(--text-muted);max-width:480px;margin:0 auto 2rem;">${escHtml(p.desc || '')}</p>
-        <a href="/#shop" class="cta-btn" style="display:inline-block;text-decoration:none;padding:14px 36px;font-size:1rem;">Vezi Colectia</a>
-    </div>
-    <footer><p data-i18n="footer">&copy; 2026 Luci Boutique. Toate drepturile rezervate.</p></footer>
-    <script src="/js/i18n.js"></script>
-    <script src="/js/controls.js"></script>
-    <script src="/js/controls-swipe.js"></script>
-    <script src="/js/telemetry.js"></script>
-    <script src="/js/app.js" defer></script>
-    <script>initLang();</script>
-</body>
-</html>`;
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-=======
-<<<<<<< Updated upstream
-app.get('/adminpan', (req, res) => {
-=======
 app.get('/product/:id', (req, res) => {
     const id = Number(req.params.id);
     const lang = pickShareLang(String(req.query.lang || '').toLowerCase());
@@ -1165,15 +806,10 @@ app.get('/product/:id', (req, res) => {
 </head>`);
 
     res.setHeader('Cache-Control', 'no-cache');
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.send(html);
 });
 app.get('/login', (req, res) => {
     if (req.session?.authenticated) return res.redirect(302, '/admops');
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(DIR_PUBLIC, 'login.html'));
@@ -1237,78 +873,10 @@ app.get('/api/products', (req, res) => {
     }
 });
 
-<<<<<<< HEAD
 app.get('/api/telemetry-settings', (req, res) => {
     const settings = readTelemetrySettings();
     res.setHeader('Cache-Control', 'no-store');
     res.json({ success: true, settings });
-=======
-// api pentru admin fiecare endpoint este verificat.
-app.post('/api/admin/login', (req, res) => {
-    const ip = req.ip;
-    const bf = checkBrute(ip);
-    if (!bf.ok) {
-        log('WARN', `Login blocat: ${ip}`);
-        return res.status(429).json({ success: false, error: `Prea multe incercari. Asteptati ${bf.wait}s.` });
-    }
-    const username = sanitize(req.body.username, 80);
-    const password = sanitize(req.body.password, 200);
-    if (!username || !password || username !== ADMIN_USER || password !== ADMIN_PASS) {
-        log('WARN', `Login esuat: ${ip}`);
-        return res.status(401).json({ success: false, error: 'Credentiale gresite.' });
-    }
-<<<<<<< Updated upstream
-    const token = genToken();
-    sessions.set(token, { expires: Date.now() + 4 * 60 * 60 * 1000, ip });
-    loginAttempts.delete(ip);
-    log('INFO', `Admin logat: ${ip}`);
-    res.json({ success: true, token });
-=======
-
-    // Upsert device record — creates one on first login, updates lastSeen on subsequent ones
-    const existingToken = deviceManager.getDeviceToken(req);
-    const device = deviceManager.upsertDevice(existingToken, {
-        ip:         ip,
-        userAgent:  req.headers['user-agent'],
-        secChUa:    req.headers['sec-ch-ua'],
-        authMethod: 'password',
-    });
-
-    // Regenerate session ID to prevent session fixation attacks
-    req.session.regenerate((err) => {
-        if (err) {
-            logger.error(`Session regeneration failed: ${err.message}`);
-            return res.status(500).json({ success: false, error: 'Eroare server.' });
-        }
-
-        req.session.authenticated = true;
-        req.session.loginTime     = Date.now();
-        req.session.credId        = 'password';
-        req.session.deviceToken   = device.token;
-        if (rememberMe) {
-            req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-        } else {
-            req.session.cookie.maxAge = undefined; // session cookie — expires when browser closes
-            req.session.cookie.expires = false;
-        }
-
-        deviceManager.setDeviceCookie(res, device.token, process.env.NODE_ENV === 'production');
-
-        activityLog.logActivity(device.token, 'login', { ip, deviceName: device.name });
-        logger.info(`Admin logat: ${ip}${rememberMe ? ' (remember me)' : ''} device=${device.token.slice(0,8)}`);
-
-        emitAdmin('devices_update', deviceManager.getAllDevices());
-
-        req.session.save((saveErr) => {
-            if (saveErr) {
-                logger.error(`Session save failed (password login): ${saveErr.message}`);
-                return res.status(500).json({ success: false, error: 'Eroare server.' });
-            }
-            res.json({ success: true });
-        });
-    });
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 });
 
 app.post('/api/telemetry', express.text({ type: '*/*', limit: '256kb' }), (req, res) => {
@@ -1413,7 +981,7 @@ app.post('/api/admops/login', loginLimiter, async (req, res) => {
         activityLog.logActivity(device.token, 'login', { ip, deviceName: device.name });
         logger.info(`Admin logat: ${ip}${rememberMe ? ' (remember me)' : ''} device=${device.token.slice(0,8)}`);
 
-        io.emit('devices_update', deviceManager.getAllDevices());
+        emitAdmin('devices_update', deviceManager.getAllDevices());
 
         req.session.save((saveErr) => {
             if (saveErr) {
@@ -1472,12 +1040,6 @@ app.get('/api/admops/webauthn/auth-options', webauthnOptionsLimiter, async (req,
     } catch (e) { logger.error(`WebAuthn auth-opts: ${e.message}`); res.status(500).json({ success: false, error: e.message }); }
 });
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-app.get('/api/admin/logs', requireAdmin, (req, res) => {
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 // Register challenge endpoint — only called when adding a new passkey
 app.get('/api/admops/webauthn/register-options', webauthnOptionsLimiter, requireAdm, async (req, res) => {
     try {
@@ -1602,11 +1164,7 @@ app.post('/api/admops/webauthn/verify-registration', webauthnVerifyLimiter, asyn
         req.session.lastPasskeyAuth = Date.now(); // was missing — grace period check in requireAdm needs this
         req.session.cookie.maxAge   = 30 * 24 * 60 * 60 * 1000;
         logger.info(`Passkey inregistrata de la: ${getRealIp(req)}`);
-<<<<<<< HEAD
-        io.emit('devices_update', deviceManager.getAllDevices());
-=======
         emitAdmin('devices_update', deviceManager.getAllDevices());
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         req.session.save((saveErr) => {
             if (saveErr) {
                 logger.error(`Session save failed (register passkey): ${saveErr.message}`);
@@ -1683,11 +1241,7 @@ app.post('/api/admops/webauthn/verify-authentication', webauthnVerifyLimiter, as
             activityLog.logActivity(device.token, 'login', { ip, deviceName: device.name });
             logger.info(`Passkey login reusit: ${ip} device=${device.token.slice(0,8)}`);
 
-<<<<<<< HEAD
-            io.emit('devices_update', deviceManager.getAllDevices());
-=======
             emitAdmin('devices_update', deviceManager.getAllDevices());
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
             req.session.save((saveErr) => {
                 if (saveErr) {
@@ -1818,11 +1372,7 @@ app.delete('/api/admops/devices/:token/passkey', requireAdm, (req, res) => {
     deviceManager.unlinkPasskeyByCred(device.passkeyCredId);
     activityLog.logActivity(req.session.deviceToken, 'passkey_deleted', { deviceName: device.name });
     logger.info(`Passkey sters de pe device ${req.params.token.slice(0,8)} de la ${getRealIp(req)}`);
-<<<<<<< HEAD
-    io.emit('devices_update', deviceManager.getAllDevices());
-=======
     emitAdmin('devices_update', deviceManager.getAllDevices());
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true });
 });
 
@@ -1861,11 +1411,7 @@ app.delete('/api/admops/devices/:token', requireAdm, (req, res) => {
         }
     });
 
-<<<<<<< HEAD
-    io.emit('devices_update', deviceManager.getAllDevices());
-=======
     emitAdmin('devices_update', deviceManager.getAllDevices());
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true });
 });
 
@@ -2061,10 +1607,6 @@ app.get('/api/admops/check-device-passkey', (req, res) => {
 // GET /api/admops/orders — canonical route with error handling is defined below
 
 app.get('/api/admops/logs', requireAdm, (req, res) => {
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const lines = fs.readFileSync(FILE_LOGS, 'utf-8')
         .trim().split('\n').filter(Boolean).slice(-200).reverse();
     res.json({ success: true, logs: lines });
@@ -2081,16 +1623,8 @@ app.get('/api/admops/products', requireAdm, (req, res) => {
 
 app.post('/api/admops/upload', requireAdm, upload.single('image'), (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, error: 'Fisier invalid.' });
-<<<<<<< HEAD
-    logger.info(`Imagine incarcata: ${req.file.filename}`);
-=======
-<<<<<<< Updated upstream
-    log('INFO', `Imagine incarcata: ${req.file.filename}`);
-=======
     invalidateAssetFingerprint();
     logger.info(`Imagine incarcata: ${req.file.filename}`);
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true, path: '/uploads/' + req.file.filename });
 });
 
@@ -2191,11 +1725,6 @@ app.delete('/api/admops/products/:id', requireAdm, (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
     // Order IDs are strings like "ORD-1749..." — do NOT Number() them
     const id = String(req.params.id).trim();
@@ -2206,23 +1735,14 @@ app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
         return res.status(400).json({ success: false, error: 'Status invalid.' });
     }
     try {
-<<<<<<< HEAD
-        const orders = JSON.parse(fs.readFileSync(FILE_ORDERS, 'utf-8'));
-=======
         const orders = readOrders();
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         const idx = orders.findIndex(o => o.id === id);
         if (idx === -1) return res.status(404).json({ success: false, error: 'Comanda negasita.' });
         const prev = orders[idx].status;
         orders[idx].status = status;
         orders[idx].updatedAt = new Date().toISOString();
-<<<<<<< HEAD
-        fs.writeFileSync(FILE_ORDERS, JSON.stringify(orders, null, 2));
-        io.emit('order_status', { orderId: id, status, prev, updatedAt: orders[idx].updatedAt });
-=======
         saveOrders(orders);
         emitAdmin('order_status', { orderId: id, status, prev, updatedAt: orders[idx].updatedAt });
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         if (['preparing', 'shipped', 'delivered'].includes(status)) {
             await sendPushNotification(id, status);
         }
@@ -2237,35 +1757,19 @@ app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
 
 app.get('/api/admops/orders', requireAdm, (req, res) => {
     try {
-<<<<<<< HEAD
-        res.json({ success: true, orders: JSON.parse(fs.readFileSync(FILE_ORDERS, 'utf-8')) });
-=======
         res.json({ success: true, orders: readOrders() });
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch (e) {
         logger.error(`readOrders: ${e.message}`);
         res.status(500).json({ success: false, error: 'Nu am putut citi comenzile.' });
     }
 });
 
-<<<<<<< HEAD
-app.post('/api/push/subscribe', (req, res) => {
-=======
 app.post('/api/push/subscribe', requireAdm, (req, res) => {
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     try {
         const sub = req.body;
         if (!sub || !sub.endpoint) {
             return res.status(400).json({ success: false, error: 'Subscription invalid.' });
         }
-<<<<<<< HEAD
-        const subs = readPushSubs();
-        const exists = subs.find(s => s.endpoint === sub.endpoint);
-        if (!exists) {
-            subs.push(sub);
-            savePushSubs(subs);
-            logger.info(`Push subs crat: ${sub.endpoint.slice(0, 40)}...`);
-=======
         const adminDeviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req) || 'admin';
         const adminSub = {
             ...sub,
@@ -2281,7 +1785,6 @@ app.post('/api/push/subscribe', requireAdm, (req, res) => {
         } else {
             subs[idx] = { ...subs[idx], ...adminSub };
             savePushSubs(subs);
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         }
         res.json({ success: true });
     } catch (e) {
@@ -2290,11 +1793,7 @@ app.post('/api/push/subscribe', requireAdm, (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-app.delete('/api/push/subscribe', (req, res) => {
-=======
 app.delete('/api/push/subscribe', requireAdm, (req, res) => {
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     try {
         const { endpoint } = req.body;
         if (!endpoint) return res.status(400).json({ success: false, error: 'Endpoint necesar.' });
@@ -2308,33 +1807,22 @@ app.delete('/api/push/subscribe', requireAdm, (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-app.get('/api/vapid-key', (req, res) => {
-    res.json({ success: true, publicKey: VAPID_PUBLIC || '' });
-});
-
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.get('/api/admops/vapid-key', requireAdm, (req, res) => {
     res.json({ success: true, publicKey: VAPID_PUBLIC || '' });
 });
 
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.post('/api/order', async (req, res) => {
     // Validate against raw input BEFORE sanitizeNoSQL — sanitize HTML-encodes characters
     // like ' → &#x27; and / → &#x2F; which then fail the validator regexes.
     const rawBody = req.body;
 
-    if (!validateName(rawBody.customer?.name))
+    if (!validateName(rawBody?.customer?.name))
         return res.status(400).json({ success: false, error: 'Nume invalid.' });
-    if (!validatePhone(rawBody.customer?.phone))
+    if (!validatePhone(rawBody?.customer?.phone))
         return res.status(400).json({ success: false, error: 'Telefon invalid.' });
-    if (!validateAddress(rawBody.customer?.address))
+    if (!validateAddress(rawBody?.customer?.address))
         return res.status(400).json({ success: false, error: 'Adresa invalida.' });
-    if (rawBody.customer?.email && !validateEmail(rawBody.customer.email))
+    if (rawBody?.customer?.email && !validateEmail(rawBody?.customer?.email))
         return res.status(400).json({ success: false, error: 'Email invalid.' });
 
     if (!Array.isArray(rawBody.cart) || rawBody.cart.length === 0)
@@ -2372,19 +1860,10 @@ app.post('/api/order', async (req, res) => {
 
     try {
         saveOrder(order);
-<<<<<<< HEAD
-        logger.info(`Comanda salvata: ${order.id} | ${customer.name} | ${total} MDL`);
-        io.emit('new_order', order);
-=======
-<<<<<<< Updated upstream
-        log('INFO', `Comanda salvata: ${order.id} | ${customer.name} | ${total} MDL`);
-=======
         logger.info(`Comanda salvata: ${order.id} | ${total} MDL`);
         emitAdmin('new_order', order);
         sendPushNotification(order.id, 'new_order')
             .catch(e => logger.error(`Push comanda noua ${order.id}: ${e.message}`));
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch (e) {
         logger.error(`Salvare comanda: ${e.message}`);
         return res.status(500).json({ success: false, error: 'Eroare la salvarea comenzii.' });
@@ -2411,32 +1890,14 @@ app.post('/api/order', async (req, res) => {
         </table>
         <p style="text-align:right;font-size:1.1rem;font-weight:700;color:#aa0132;margin-top:10px;">Total: ${total} MDL</p>`;
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-    try {
-        await mailer.sendMail({
-            from:    `Luci Boutique <${process.env.EMAIL_USER}>`,
-            to:      process.env.EMAIL_USER,
-            subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
-            html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
-=======
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     // Send emails in the background — do NOT block or fail the order on email errors
     (async () => {
         try {
             await mailer.sendMail({
                 from:    `Luci Boutique <${process.env.EMAIL_USER}>`,
-<<<<<<< HEAD
-                to:      process.env.EMAIL_USER,
-                subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
-                html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
-=======
                 to:      STORE_EMAIL,
                 subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
                 html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                 <h2 style="color:#aa0132;">Comanda Noua</h2>
                 <p><strong>ID:</strong> ${order.id}</p>
                 <p><strong>Client:</strong> ${escHtml(customer.name)}</p>
@@ -2506,15 +1967,7 @@ app.post('/api/contact', async (req, res) => {
                 <p style="background:#f4f4f4;padding:15px;border-radius:8px;white-space:pre-wrap;">${escHtml(message)}</p>
             </div>`
         });
-<<<<<<< HEAD
-        logger.info(`Contact de la ${name} (${ip})`);
-=======
-<<<<<<< Updated upstream
-        log('INFO', `Contact de la ${name} (${ip})`);
-=======
         logger.info(`Contact form primit (${ip})`);
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         res.json({ success: true });
     } catch (e) {
         logger.error(`Email contact: ${e.message}`);
@@ -2545,23 +1998,11 @@ async function shutdown(signal) {
         logger.info(`Server oprit. (${signal})`);
         process.exit(0);
     } catch (e) {
-<<<<<<< HEAD
-        if (e && /Server is not running/i.test(String(e.message || ''))) {
-            logger.info(`Server deja oprit. (${signal})`);
-            process.exit(0);
-        }
-        logger.error(`Eroare oprire: ${e.message}`);
-=======
-<<<<<<< Updated upstream
-        log('ERROR', `Eroare oprire: ${e.message}`);
-=======
         if (e && /Server is not running/i.test(String(e.message || ''))) {
             logger.info(`Server oprit.`);
             process.exit(0);
         }
         logger.error(`Eroare oprire: ${e.message}`);
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         process.exit(1);
     }
 }
@@ -2583,10 +2024,6 @@ const io = new Server(server, {
         credentials: true
     }
 });
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
 
 io.engine.use(sessionMiddleware);
 io.use((socket, next) => {
@@ -2598,7 +2035,6 @@ io.use((socket, next) => {
 function emitAdmin(event, payload) {
     io.to('admin').emit(event, payload);
 }
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 process.stdin.on('data', chunk => {
     const cmd = chunk.toString().trim().toLowerCase();
@@ -2606,15 +2042,10 @@ process.stdin.on('data', chunk => {
 });
 
 io.on('connection', socket => {
-<<<<<<< HEAD
-    socket.on('register_device', (token) => {
-        if (typeof token !== 'string' || token.length !== 64) return; // sanity check
-=======
     socket.join('admin');
     socket.on('register_device', (token) => {
         if (typeof token !== 'string' || token.length !== 64) return; // sanity check
         if (socket.request.session?.deviceToken !== token) return;
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         // Leave any previous device room before joining the new one
         const prevRoom = [...socket.rooms].find(r => r.startsWith('device:'));
         if (prevRoom) socket.leave(prevRoom);
@@ -2625,13 +2056,6 @@ io.on('connection', socket => {
     socket.on('disconnect', () => logger.info(`WS disc: ${socket.id}`));
 });
 
-<<<<<<< HEAD
-server.listen(PORT, () => {
-    logger.banner('Luci Boutique', '6.2', [
-        { key: 'Port',         val: PORT },
-        { key: 'Environment',  val: process.env.NODE_ENV || 'development' },
-        { key: 'Admin URL',    val: `http://localhost:${PORT}/admops` },
-=======
 function isTrustedHttpsUrl(url) {
     try {
         const parsed = new URL(url);
@@ -2657,15 +2081,10 @@ server.listen(PORT, () => {
         { key: 'Environment',  val: process.env.NODE_ENV || 'development' },
         { key: 'Public URL',   val: hasTrustedPublicUrl ? publicUrl : 'not trusted - set SITE_URL=https://your-domain' },
         { key: 'Admin URL',    val: hasTrustedPublicUrl ? `${publicUrl}/admops` : `${localUrl}/admops (dev only)` },
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         { key: 'Email',        val: process.env.EMAIL_USER ? 'configured' : 'not set' },
         { key: 'Push (VAPID)', val: VAPID_PUBLIC ? 'configured' : 'disabled' },
     ]);
     logger.divider();
-<<<<<<< HEAD
-    console.log(`  ➜  Local:   http://localhost:${PORT}`);
-    console.log(`  ➜  Network: http://${require('os').hostname()}:${PORT}`);
-=======
     if (hasTrustedPublicUrl) {
         console.log(`  ➜  Public:  ${publicUrl}`);
         console.log(`  ➜  Admin:   ${publicUrl}/admops`);
@@ -2673,7 +2092,6 @@ server.listen(PORT, () => {
         console.log(`  ➜  Local:   ${localUrl} (dev only)`);
         console.log('  ⚠  HTTPS features need a trusted domain. Set SITE_URL=https://your-domain');
     }
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     logger.divider();
 });
 
@@ -2754,9 +2172,4 @@ function generateInvoicePDF(order) {
 
         doc.end();
     });
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> Stashed changes
->>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
