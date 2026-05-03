@@ -1,12 +1,37 @@
+<<<<<<< HEAD
 // rewrite the entire server.js Vs6.2
 
 
 if (!globalThis.crypto) { globalThis.crypto = require('crypto').webcrypto; }
+=======
+<<<<<<< Updated upstream
+// rewrite the entire server.js V4 speram ca de data asta merge cum trebu
+// patch 4.4
+
+=======
+// serverV variable is the version of the server.
+let serverV = 6.5;
+
+if (!globalThis.crypto) { globalThis.crypto = require('crypto').webcrypto; }
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 require('dotenv').config();
 
 const http = require('http');
 const express = require('express');
 const nodemailer = require('nodemailer');
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+const cors       = require('cors');
+const path       = require('path');
+const fs         = require('fs');
+const crypto     = require('crypto');
+const readline   = require('readline');
+const multer     = require('multer');
+const app  = express();
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -19,13 +44,20 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const webpush = require('web-push');
 const cookieParser  = require('cookie-parser');
+<<<<<<< HEAD
 const bcrypt = require('bcrypt');
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const activityLog   = require('./ext/activityLog');
 const deviceManager = require('./ext/deviceManager');
 const telemetryProcessor = require('./ext/telemetryProcessor');
 const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } = require('@simplewebauthn/server');
 const { isoBase64URL, isoBase64ToBuffer, isoUint8ArrayToBase64 } = require('@simplewebauthn/server/helpers');
 const app = express();
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const PORT = process.env.PORT || 3000;
 const DIR_DATA      = path.join(__dirname, 'data');
 const DIR_PUBLIC    = path.join(__dirname, 'public');
@@ -34,11 +66,21 @@ const DIR_UPLOADS   = path.join(DIR_PUBLIC, 'uploads');
 const FILE_ORDERS   = path.join(DIR_DATA, 'orders.json');
 const FILE_LOGS     = path.join(DIR_DATA, 'server.log');
 const FILE_PRODUCTS = path.join(DIR_PUBLIC, 'js', 'products.js');
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+const FILE_I18N     = path.join(DIR_PUBLIC, 'js', 'i18n.js');
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const FILE_CREDS    = path.join(DIR_DATA, 'credentials.json');
 const FILE_PUSH     = path.join(DIR_DATA, 'push-subscriptions.json');
 const FILE_TELEMETRY = path.join(DIR_DATA, 'telemetry.json');
 const FILE_TELEMETRY_SETTINGS = path.join(DIR_DATA, 'telemetry-settings.json');
 const Logger = require('./ext/logger');
+<<<<<<< HEAD
+=======
+const secureStore = require('./ext/secureStore');
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const logger = new Logger(DIR_DATA);
 const MAX_TELEMETRY_EVENTS = 20000;
 const DEFAULT_TELEMETRY_SETTINGS = {
@@ -49,6 +91,10 @@ const DEFAULT_TELEMETRY_SETTINGS = {
     td3: true,
     checkout: true
 };
+<<<<<<< HEAD
+=======
+const ASSET_LEASE_MS = 30 * 60 * 1000;
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC  || '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
@@ -57,6 +103,7 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 }
 
 function readPushSubs() {
+<<<<<<< HEAD
     try { return JSON.parse(fs.readFileSync(FILE_PUSH, 'utf-8')); }
     catch { return []; }
 }
@@ -69,11 +116,29 @@ async function sendPushNotification(orderId, status) {
     const subs = readPushSubs();
     if (!subs.length) return;
     const titles = {
+=======
+    return secureStore.readJson(FILE_PUSH, []);
+}
+
+function savePushSubs(subs) {
+    secureStore.writeJson(FILE_PUSH, subs);
+}
+
+async function sendPushNotification(orderId, status) {
+    const subs = readPushSubs().filter(sub => sub && sub.adminDeviceToken);
+    if (!subs.length) return;
+    const titles = {
+        new_order: 'Comanda noua',
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         preparing: 'Comanda in pregatire',
         shipped: 'Comanda a fost expediata',
         delivered: 'Comanda a fost livrata!'
     };
     const bodies = {
+<<<<<<< HEAD
+=======
+        new_order: `A intrat o comanda noua: #${orderId}.`,
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         preparing: `Comanda #${orderId} este acum in pregatire. Vom lua legatura cu tine curand.`,
         shipped: `Comanda #${orderId} a plecat spre tine! Curand o vei primi.`,
         delivered: `Comanda #${orderId} a fost livrata cu succes! Florile au ajuns in siguranta.`
@@ -84,7 +149,11 @@ async function sendPushNotification(orderId, status) {
         icon: '/assets/favicon.svg',
         badge: '/assets/favicon.svg',
         tag: `order-${orderId}`,
+<<<<<<< HEAD
         data: { orderId, status, url: '/' }
+=======
+        data: { orderId, status, url: '/admops' }
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     });
     const results = await Promise.allSettled(
         subs.map(sub => webpush.sendNotification(sub, payload).catch(() => null))
@@ -95,16 +164,43 @@ async function sendPushNotification(orderId, status) {
         if (validSubs.length < subs.length) { savePushSubs(validSubs); logger.info(`Push: ${failed} subs expirati eliminati`); }
     }
 }
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 for (const dir of [DIR_DATA, DIR_UPLOADS]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
+<<<<<<< Updated upstream
 if (!fs.existsSync(FILE_ORDERS)) fs.writeFileSync(FILE_ORDERS, '[]');
 if (!fs.existsSync(FILE_LOGS))   fs.writeFileSync(FILE_LOGS, '');
+<<<<<<< HEAD
 if (!fs.existsSync(FILE_CREDS))  fs.writeFileSync(FILE_CREDS, '[]');
 if (!fs.existsSync(FILE_PUSH))   fs.writeFileSync(FILE_PUSH, '[]');
 if (!fs.existsSync(FILE_TELEMETRY)) fs.writeFileSync(FILE_TELEMETRY, '[]');
 if (!fs.existsSync(FILE_TELEMETRY_SETTINGS)) fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(DEFAULT_TELEMETRY_SETTINGS, null, 2));
+=======
+=======
+
+function ensureJsonFile(filePath, fallback) {
+    if (secureStore.encryptionEnabled()) {
+        secureStore.migrateJsonFile(filePath, fallback);
+    } else if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2));
+    }
+}
+
+ensureJsonFile(FILE_ORDERS, []);
+if (!fs.existsSync(FILE_LOGS)) fs.writeFileSync(FILE_LOGS, '');
+ensureJsonFile(FILE_CREDS, []);
+ensureJsonFile(FILE_PUSH, []);
+ensureJsonFile(FILE_TELEMETRY, []);
+ensureJsonFile(FILE_TELEMETRY_SETTINGS, DEFAULT_TELEMETRY_SETTINGS);
+ensureJsonFile(path.join(DIR_DATA, 'devices.json'), []);
+ensureJsonFile(path.join(DIR_DATA, 'activity.json'), {});
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 
 function escHtml(s) {
@@ -128,6 +224,13 @@ function sanitize(val, maxLen) {
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+function isValidEmail(email) {
+    return /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(email);
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function validateName(val) {
     return /^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s\-\.\']+$/.test(String(val ?? '').trim()) && String(val).trim().length >= 2;
 }
@@ -214,12 +317,17 @@ function getCountryFromReq(req) {
 }
 
 function readTelemetryEvents() {
+<<<<<<< HEAD
     try {
         const data = JSON.parse(fs.readFileSync(FILE_TELEMETRY, 'utf-8'));
         return Array.isArray(data) ? data : [];
     } catch {
         return [];
     }
+=======
+    const data = secureStore.readJson(FILE_TELEMETRY, []);
+    return Array.isArray(data) ? data : [];
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function appendTelemetryEvents(events) {
@@ -229,23 +337,36 @@ function appendTelemetryEvents(events) {
     const trimmed = existing.length > MAX_TELEMETRY_EVENTS
         ? existing.slice(existing.length - MAX_TELEMETRY_EVENTS)
         : existing;
+<<<<<<< HEAD
     fs.writeFileSync(FILE_TELEMETRY, JSON.stringify(trimmed, null, 2));
+=======
+    secureStore.writeJson(FILE_TELEMETRY, trimmed);
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     telemetryProcessor.invalidate();
     return events.length;
 }
 
 function readTelemetrySettings() {
+<<<<<<< HEAD
     try {
         const raw = JSON.parse(fs.readFileSync(FILE_TELEMETRY_SETTINGS, 'utf-8'));
         return { ...DEFAULT_TELEMETRY_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
     } catch {
         return { ...DEFAULT_TELEMETRY_SETTINGS };
     }
+=======
+    const raw = secureStore.readJson(FILE_TELEMETRY_SETTINGS, DEFAULT_TELEMETRY_SETTINGS);
+    return { ...DEFAULT_TELEMETRY_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function saveTelemetrySettings(next) {
     const merged = { ...DEFAULT_TELEMETRY_SETTINGS, ...next };
+<<<<<<< HEAD
     fs.writeFileSync(FILE_TELEMETRY_SETTINGS, JSON.stringify(merged, null, 2));
+=======
+    secureStore.writeJson(FILE_TELEMETRY_SETTINGS, merged);
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     return merged;
 }
 
@@ -272,6 +393,10 @@ function toTopList(mapObj, limit = 8) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit)
         .map(([label, value]) => ({ label, value }));
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 }
 
 function readProducts() {
@@ -280,6 +405,134 @@ function readProducts() {
     const end   = src.lastIndexOf(']');
     if (start === -1 || end === -1) return [];
     return new Function(`return ${src.slice(start, end + 1)}`)();
+}
+
+function readTranslations() {
+    const src = fs.readFileSync(FILE_I18N, 'utf-8');
+    const start = src.indexOf('{', src.indexOf('const TRANSLATIONS'));
+    const end = src.indexOf('\n};', start);
+    if (start === -1 || end === -1) return {};
+    return new Function(`return ${src.slice(start, end + 2)}`)();
+}
+
+function pickShareLang(rawLang) {
+    return ['ro', 'en', 'ru'].includes(rawLang) ? rawLang : 'ro';
+}
+
+function getProductShareText(product, lang) {
+    let translations = {};
+    try { translations = readTranslations(); } catch {}
+    const dict = translations[lang] || translations.ro || {};
+    const ro = translations.ro || {};
+    const descKey = `product_${product.id}_desc`;
+    const desc = dict[descKey] || ro[descKey] || product.desc || '';
+    const title = `${product.name} — ${product.price} MDL | Luci Boutique`;
+    return { title, desc };
+}
+
+let assetFingerprintCache = null;
+
+function invalidateAssetFingerprint() {
+    assetFingerprintCache = null;
+}
+
+function toPublicAssetPath(assetPath) {
+    const raw = String(assetPath || '').split('?')[0].split('#')[0].trim();
+    if (!raw || /^https?:\/\//i.test(raw) || raw.startsWith('data:')) return null;
+    const normalized = path.normalize(raw.replace(/^\/+/, ''));
+    const fullPath = path.join(DIR_PUBLIC, normalized);
+    const rel = path.relative(DIR_PUBLIC, fullPath);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    return { fullPath, publicPath: '/' + rel.replace(/\\/g, '/') };
+}
+
+function listUploadAssetStats() {
+    try {
+        return fs.readdirSync(DIR_UPLOADS)
+            .filter(name => /\.(avif|webp|png|jpe?g|svg|gif|glb|gltf)$/i.test(name))
+            .map(name => {
+                const fullPath = path.join(DIR_UPLOADS, name);
+                const st = fs.statSync(fullPath);
+                return { publicPath: `/uploads/${name}`, size: st.size, mtimeMs: Math.round(st.mtimeMs) };
+            });
+    } catch {
+        return [];
+    }
+}
+
+function getFileVersionEntry(filePath, label) {
+    try {
+        const st = fs.statSync(filePath);
+        return { label, size: st.size, mtimeMs: Math.round(st.mtimeMs) };
+    } catch {
+        return { label, missing: true };
+    }
+}
+
+function getStorefrontAssetState() {
+    const products = readProducts();
+    const localAssets = new Map();
+    for (const p of products) {
+        for (const assetPath of [p.image, p.model3d]) {
+            const asset = toPublicAssetPath(assetPath);
+            if (!asset || localAssets.has(asset.publicPath)) continue;
+            try {
+                const st = fs.statSync(asset.fullPath);
+                localAssets.set(asset.publicPath, {
+                    publicPath: asset.publicPath,
+                    size: st.size,
+                    mtimeMs: Math.round(st.mtimeMs)
+                });
+            } catch {
+                localAssets.set(asset.publicPath, { publicPath: asset.publicPath, missing: true });
+            }
+        }
+    }
+
+    for (const upload of listUploadAssetStats()) {
+        localAssets.set(upload.publicPath, upload);
+    }
+
+    const visibleProducts = products
+        .filter(p => p.listed !== false)
+        .map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: p.price,
+            image: p.image,
+            family: p.family,
+            desc: p.desc,
+            care: p.care,
+            note: p.note,
+            model3d: p.model3d || null,
+            listed: p.listed !== false
+        }))
+        .sort((a, b) => Number(a.id) - Number(b.id));
+
+    const payload = {
+        products: visibleProducts,
+        code: [
+            getFileVersionEntry(FILE_PRODUCTS, 'products.js'),
+            getFileVersionEntry(FILE_I18N, 'i18n.js')
+        ],
+        assets: Array.from(localAssets.values()).sort((a, b) => a.publicPath.localeCompare(b.publicPath))
+    };
+
+    const fingerprint = crypto
+        .createHash('sha256')
+        .update(JSON.stringify(payload))
+        .digest('hex')
+        .slice(0, 32);
+
+    assetFingerprintCache = {
+        fingerprint,
+        productCount: visibleProducts.length,
+        generatedAt: new Date().toISOString(),
+        images: visibleProducts.map(p => p.image).filter(Boolean),
+        models: visibleProducts.map(p => p.model3d).filter(Boolean)
+    };
+    return assetFingerprintCache;
 }
 
 function writeProducts(products) {
@@ -300,29 +553,84 @@ function writeProducts(products) {
         return `    {\n${lines.join(',\n')}\n    }`;
     });
     fs.writeFileSync(FILE_PRODUCTS, `const productsData = [\n${items.join(',\n')}\n];\n`, 'utf-8');
+    invalidateAssetFingerprint();
 }
 
 function readOrders() {
-    try { return JSON.parse(fs.readFileSync(FILE_ORDERS, 'utf-8')); }
-    catch { return []; }
+    return secureStore.readJson(FILE_ORDERS, []);
 }
 
 function saveOrder(order) {
     const orders = readOrders();
     orders.push(order);
-    fs.writeFileSync(FILE_ORDERS, JSON.stringify(orders, null, 2));
+    secureStore.writeJson(FILE_ORDERS, orders);
+}
+
+function saveOrders(orders) {
+    secureStore.writeJson(FILE_ORDERS, Array.isArray(orders) ? orders : []);
 }
 
 const mailer = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
+const STORE_EMAIL = process.env.STORE_EMAIL || process.env.EMAIL_USER;
 
 // trebuie sa fie pe enviroment usr si pass.
 const ADMIN_USER      = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS      = process.env.ADMIN_PASS || 'admin1132';
+<<<<<<< HEAD
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || '';
 const BCRYPT_HASH_RE  = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+
+// Fix 1: SESSION_SECRET must be stable across restarts.
+// If it's missing from .env, every server restart signs out ALL active sessions.
+if (!process.env.SESSION_SECRET) {
+    process.stderr.write(
+        '\n⚠️  WARNING: SESSION_SECRET is not set in .env!\n' +
+        '   Sessions will be invalidated on every server restart.\n' +
+        '   Add to .env:  SESSION_SECRET=' + require('crypto').randomBytes(64).toString('hex') + '\n\n'
+    );
+}
+const SESSION_SECRET  = process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
+const RATE_WINDOW_MS  = 60 * 1000;
+const RATE_MAX        = 5;
+
+=======
+<<<<<<< Updated upstream
+const sessions        = new Map();
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
+const loginAttempts   = new Map();
+const contactCooldown = new Map();
+
+function readCreds() {
+    try { return JSON.parse(fs.readFileSync(FILE_CREDS, 'utf-8')); }
+    catch { return []; }
+}
+
+function saveCreds(creds) {
+    fs.writeFileSync(FILE_CREDS, JSON.stringify(creds, null, 2));
+}
+
+function genToken() { return crypto.randomBytes(32).toString('hex'); }
+
+<<<<<<< HEAD
+=======
+// protejam rutele daca nu i administrator
+function requireAdmin(req, res, next) {
+    // Permitem si formatul x-admin-token si formatul Authorization Bearer
+    let token = req.headers['x-admin-token'];
+    if (!token && req.headers['authorization']) {
+        token = req.headers['authorization'].split(' ')[1];
+=======
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || '';
+const BCRYPT_HASH_RE  = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+let bcrypt = null;
+
+function getBcrypt() {
+    if (!bcrypt) bcrypt = require('bcrypt');
+    return bcrypt;
+}
 
 // Fix 1: SESSION_SECRET must be stable across restarts.
 // If it's missing from .env, every server restart signs out ALL active sessions.
@@ -341,25 +649,33 @@ const loginAttempts   = new Map();
 const contactCooldown = new Map();
 
 function readCreds() {
-    try { return JSON.parse(fs.readFileSync(FILE_CREDS, 'utf-8')); }
-    catch { return []; }
+    return secureStore.readJson(FILE_CREDS, []);
 }
 
 function saveCreds(creds) {
-    fs.writeFileSync(FILE_CREDS, JSON.stringify(creds, null, 2));
+    secureStore.writeJson(FILE_CREDS, creds);
 }
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 async function verifyAdminPassword(password) {
     const configuredHash = ADMIN_PASS_HASH || (BCRYPT_HASH_RE.test(ADMIN_PASS) ? ADMIN_PASS : '');
     if (configuredHash) {
         try {
+<<<<<<< HEAD
             return await bcrypt.compare(password, configuredHash);
+=======
+            return await getBcrypt().compare(password, configuredHash);
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         } catch (err) {
             logger.error(`bcrypt compare failed: ${err.message}`);
             return false;
         }
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
     return password === ADMIN_PASS;
 }
@@ -368,6 +684,15 @@ function requireAdm(req, res, next) {
     if (!req.session || !req.session.authenticated) {
         return res.status(401).json({ success: false, error: 'Unauthorized.' });
     }
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+    const s = sessions.get(token);
+    if (Date.now() > s.expires) {
+        sessions.delete(token);
+        return res.status(401).json({ success: false, error: 'Sesiune expirata.' });
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     // Re-hydrate device record if it went missing (e.g. server restart cleared in-memory state).
     // Only hard-block if the device was explicitly revoked via revokeDevice().
     const deviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req);
@@ -388,10 +713,20 @@ function requireAdm(req, res, next) {
         if (Date.now() - req.session.lastPasskeyAuth < passkeyGracePeriod) {
             return next();
         }
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
     next();
 }
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+// limitam incercarile de login sa nu scaneze parole
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function requireAdmPage(req, res, next) {
     if (!req.session || !req.session.authenticated) {
         return res.redirect(302, '/login');
@@ -437,6 +772,10 @@ const webauthnOptionsLimiter = rateLimit({
     message: { success: false, error: 'Prea multe cereri. Asteptati un minut.' }
 });
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 function checkBrute(ip) {
     const now = Date.now();
     const e   = loginAttempts.get(ip) || { count: 0, first: now };
@@ -490,6 +829,12 @@ const upload = multer({
     }
 });
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+app.use(cors());
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 const FileStore = require('session-file-store')(session);
 const sessionsDir = path.join(DIR_DATA, 'sessions');
 if (!fs.existsSync(sessionsDir)) {
@@ -556,7 +901,11 @@ const normalizedSiteUrl = normalizeSiteUrl(process.env.SITE_URL, `http://localho
 const isHttpsSite = normalizedSiteUrl.startsWith('https://');
 app.set('trust proxy', 1);
 
+<<<<<<< HEAD
 app.use(session({
+=======
+const sessionMiddleware = session({
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -576,13 +925,22 @@ app.use(session({
         // No default maxAge — session cookie by default; login sets it per rememberMe choice
     },
     name: 'admin_sid'
+<<<<<<< HEAD
 }));
+=======
+});
+app.use(sessionMiddleware);
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.use(cors({
     origin: process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
         : [`http://localhost:${PORT}`],
     credentials: true
 }));
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 
@@ -602,11 +960,23 @@ app.use('/api/admops', (req, res, next) => {
 });
 
 app.use(express.static(DIR_PUBLIC, {
-    maxAge: '1d',
+    maxAge: 0,
     setHeaders(res, filePath) {
+<<<<<<< HEAD
         if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
             res.setHeader('Cache-Control', 'no-cache');
         }
+=======
+<<<<<<< Updated upstream
+        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+=======
+        if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.json') || /\.(js|css)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'no-cache');
+        } else if (/\.(avif|webp|png|jpe?g|svg|gif|glb|gltf)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     }
 }));
 
@@ -616,6 +986,7 @@ app.use(express.static(DIR_PUBLIC, {
 app.get('/',         (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'index.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'checkout.html')));
 app.get('/contact',  (req, res) => res.sendFile(path.join(DIR_PUBLIC, 'contact.html')));
+<<<<<<< HEAD
 app.get('/product/:id', (req, res) => {
     const id = Number(req.params.id);
     const products = readProducts();
@@ -747,10 +1118,62 @@ app.get('/product/:id', (req, res) => {
 </body>
 </html>`;
     res.setHeader('Cache-Control', 'public, max-age=3600');
+=======
+<<<<<<< Updated upstream
+app.get('/adminpan', (req, res) => {
+=======
+app.get('/product/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const lang = pickShareLang(String(req.query.lang || '').toLowerCase());
+    const products = readProducts();
+    const p = products.find(x => x.id === id && x.listed !== false);
+    if (!p) return res.status(404).sendFile(path.join(DIR_PUBLIC, 'index.html'));
+    const assetState = getStorefrontAssetState();
+    const siteUrl = normalizeSiteUrl(process.env.SITE_URL, getRequestOrigin(req));
+    const productUrl = `${siteUrl}/product/${p.id}?lang=${lang}`;
+    const imagePath = String(p.image || '');
+    const imgUrl = !imagePath ? ''
+        : (/^https?:\/\//i.test(imagePath) ? imagePath : `${siteUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`);
+    const { title, desc } = getProductShareText(p, lang);
+    const locale = ({ ro: 'ro_MD', en: 'en_US', ru: 'ru_RU' })[lang];
+    let html = fs.readFileSync(path.join(DIR_PUBLIC, 'index.html'), 'utf-8');
+
+    html = html
+        .replace('<head>', '<head>\n    <base href="/">')
+        .replace(/<html lang="[^"]*">/, `<html lang="${lang}">`)
+        .replace(/<title>.*?<\/title>/, `<title>${escHtml(title)}</title>`)
+        .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${escHtml(desc)}">`)
+        .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${escHtml(title)}">`)
+        .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${escHtml(desc)}">`)
+        .replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${escHtml(imgUrl)}">
+    <meta property="og:url" content="${escHtml(productUrl)}">
+    <meta property="product:price:amount" content="${Number(p.price) || 0}">
+    <meta property="product:price:currency" content="MDL">`)
+        .replace(/<meta property="og:type" content="[^"]*">/, '<meta property="og:type" content="product">')
+        .replace(/<meta property="og:locale" content="[^"]*">/, `<meta property="og:locale" content="${locale}">`)
+        .replace(/<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${escHtml(title)}">`)
+        .replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${escHtml(desc)}">`)
+        .replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${escHtml(imgUrl)}">
+    <link rel="canonical" href="${escHtml(productUrl)}">`)
+        .replace('</head>', `    <script>
+        window.__shareProductId = ${Number(p.id)};
+        window.__shareLang = ${JSON.stringify(lang)};
+        window.__shareFingerprint = ${JSON.stringify(assetState.fingerprint)};
+        localStorage.setItem('lb_lang', ${JSON.stringify(lang)});
+        document.documentElement.lang = ${JSON.stringify(lang)};
+    </script>
+</head>`);
+
+    res.setHeader('Cache-Control', 'no-cache');
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.send(html);
 });
 app.get('/login', (req, res) => {
     if (req.session?.authenticated) return res.redirect(302, '/admops');
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(DIR_PUBLIC, 'login.html'));
@@ -775,21 +1198,117 @@ app.use('/private', requireAdmPage, express.static(DIR_PRIVATE, {
 
 
 // api custom 
+app.get('/api/assets/lease', (req, res) => {
+    try {
+        const clientFingerprint = String(req.query.fingerprint || '').trim();
+        const state = getStorefrontAssetState();
+        const match = Boolean(clientFingerprint && clientFingerprint === state.fingerprint);
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({
+            success: true,
+            match,
+            fingerprint: state.fingerprint,
+            productCount: state.productCount,
+            leaseMs: ASSET_LEASE_MS,
+            expiresAt: Date.now() + ASSET_LEASE_MS,
+            generatedAt: state.generatedAt
+        });
+    } catch (e) {
+        logger.error(`asset lease: ${e.message}`);
+        res.status(500).json({ success: false, error: 'Nu am putut verifica versiunea.' });
+    }
+});
+
 app.get('/api/products', (req, res) => {
     try {
         const products = readProducts().filter(p => p.listed !== false);
-        res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
-        res.json({ success: true, products });
+        const state = getStorefrontAssetState();
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({
+            success: true,
+            products,
+            fingerprint: state.fingerprint,
+            leaseMs: ASSET_LEASE_MS,
+            generatedAt: state.generatedAt
+        });
     } catch (e) {
         logger.error(`readProducts: ${e.message}`);
         res.json({ success: true, products: [] });
     }
 });
 
+<<<<<<< HEAD
 app.get('/api/telemetry-settings', (req, res) => {
     const settings = readTelemetrySettings();
     res.setHeader('Cache-Control', 'no-store');
     res.json({ success: true, settings });
+=======
+// api pentru admin fiecare endpoint este verificat.
+app.post('/api/admin/login', (req, res) => {
+    const ip = req.ip;
+    const bf = checkBrute(ip);
+    if (!bf.ok) {
+        log('WARN', `Login blocat: ${ip}`);
+        return res.status(429).json({ success: false, error: `Prea multe incercari. Asteptati ${bf.wait}s.` });
+    }
+    const username = sanitize(req.body.username, 80);
+    const password = sanitize(req.body.password, 200);
+    if (!username || !password || username !== ADMIN_USER || password !== ADMIN_PASS) {
+        log('WARN', `Login esuat: ${ip}`);
+        return res.status(401).json({ success: false, error: 'Credentiale gresite.' });
+    }
+<<<<<<< Updated upstream
+    const token = genToken();
+    sessions.set(token, { expires: Date.now() + 4 * 60 * 60 * 1000, ip });
+    loginAttempts.delete(ip);
+    log('INFO', `Admin logat: ${ip}`);
+    res.json({ success: true, token });
+=======
+
+    // Upsert device record — creates one on first login, updates lastSeen on subsequent ones
+    const existingToken = deviceManager.getDeviceToken(req);
+    const device = deviceManager.upsertDevice(existingToken, {
+        ip:         ip,
+        userAgent:  req.headers['user-agent'],
+        secChUa:    req.headers['sec-ch-ua'],
+        authMethod: 'password',
+    });
+
+    // Regenerate session ID to prevent session fixation attacks
+    req.session.regenerate((err) => {
+        if (err) {
+            logger.error(`Session regeneration failed: ${err.message}`);
+            return res.status(500).json({ success: false, error: 'Eroare server.' });
+        }
+
+        req.session.authenticated = true;
+        req.session.loginTime     = Date.now();
+        req.session.credId        = 'password';
+        req.session.deviceToken   = device.token;
+        if (rememberMe) {
+            req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+        } else {
+            req.session.cookie.maxAge = undefined; // session cookie — expires when browser closes
+            req.session.cookie.expires = false;
+        }
+
+        deviceManager.setDeviceCookie(res, device.token, process.env.NODE_ENV === 'production');
+
+        activityLog.logActivity(device.token, 'login', { ip, deviceName: device.name });
+        logger.info(`Admin logat: ${ip}${rememberMe ? ' (remember me)' : ''} device=${device.token.slice(0,8)}`);
+
+        emitAdmin('devices_update', deviceManager.getAllDevices());
+
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                logger.error(`Session save failed (password login): ${saveErr.message}`);
+                return res.status(500).json({ success: false, error: 'Eroare server.' });
+            }
+            res.json({ success: true });
+        });
+    });
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 });
 
 app.post('/api/telemetry', express.text({ type: '*/*', limit: '256kb' }), (req, res) => {
@@ -953,6 +1472,12 @@ app.get('/api/admops/webauthn/auth-options', webauthnOptionsLimiter, async (req,
     } catch (e) { logger.error(`WebAuthn auth-opts: ${e.message}`); res.status(500).json({ success: false, error: e.message }); }
 });
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+app.get('/api/admin/logs', requireAdmin, (req, res) => {
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 // Register challenge endpoint — only called when adding a new passkey
 app.get('/api/admops/webauthn/register-options', webauthnOptionsLimiter, requireAdm, async (req, res) => {
     try {
@@ -1077,7 +1602,11 @@ app.post('/api/admops/webauthn/verify-registration', webauthnVerifyLimiter, asyn
         req.session.lastPasskeyAuth = Date.now(); // was missing — grace period check in requireAdm needs this
         req.session.cookie.maxAge   = 30 * 24 * 60 * 60 * 1000;
         logger.info(`Passkey inregistrata de la: ${getRealIp(req)}`);
+<<<<<<< HEAD
         io.emit('devices_update', deviceManager.getAllDevices());
+=======
+        emitAdmin('devices_update', deviceManager.getAllDevices());
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         req.session.save((saveErr) => {
             if (saveErr) {
                 logger.error(`Session save failed (register passkey): ${saveErr.message}`);
@@ -1154,7 +1683,11 @@ app.post('/api/admops/webauthn/verify-authentication', webauthnVerifyLimiter, as
             activityLog.logActivity(device.token, 'login', { ip, deviceName: device.name });
             logger.info(`Passkey login reusit: ${ip} device=${device.token.slice(0,8)}`);
 
+<<<<<<< HEAD
             io.emit('devices_update', deviceManager.getAllDevices());
+=======
+            emitAdmin('devices_update', deviceManager.getAllDevices());
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
             req.session.save((saveErr) => {
                 if (saveErr) {
@@ -1285,7 +1818,11 @@ app.delete('/api/admops/devices/:token/passkey', requireAdm, (req, res) => {
     deviceManager.unlinkPasskeyByCred(device.passkeyCredId);
     activityLog.logActivity(req.session.deviceToken, 'passkey_deleted', { deviceName: device.name });
     logger.info(`Passkey sters de pe device ${req.params.token.slice(0,8)} de la ${getRealIp(req)}`);
+<<<<<<< HEAD
     io.emit('devices_update', deviceManager.getAllDevices());
+=======
+    emitAdmin('devices_update', deviceManager.getAllDevices());
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true });
 });
 
@@ -1324,7 +1861,11 @@ app.delete('/api/admops/devices/:token', requireAdm, (req, res) => {
         }
     });
 
+<<<<<<< HEAD
     io.emit('devices_update', deviceManager.getAllDevices());
+=======
+    emitAdmin('devices_update', deviceManager.getAllDevices());
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true });
 });
 
@@ -1520,6 +2061,10 @@ app.get('/api/admops/check-device-passkey', (req, res) => {
 // GET /api/admops/orders — canonical route with error handling is defined below
 
 app.get('/api/admops/logs', requireAdm, (req, res) => {
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     const lines = fs.readFileSync(FILE_LOGS, 'utf-8')
         .trim().split('\n').filter(Boolean).slice(-200).reverse();
     res.json({ success: true, logs: lines });
@@ -1536,7 +2081,16 @@ app.get('/api/admops/products', requireAdm, (req, res) => {
 
 app.post('/api/admops/upload', requireAdm, upload.single('image'), (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, error: 'Fisier invalid.' });
+<<<<<<< HEAD
     logger.info(`Imagine incarcata: ${req.file.filename}`);
+=======
+<<<<<<< Updated upstream
+    log('INFO', `Imagine incarcata: ${req.file.filename}`);
+=======
+    invalidateAssetFingerprint();
+    logger.info(`Imagine incarcata: ${req.file.filename}`);
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     res.json({ success: true, path: '/uploads/' + req.file.filename });
 });
 
@@ -1637,6 +2191,11 @@ app.delete('/api/admops/products/:id', requireAdm, (req, res) => {
     }
 });
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
     // Order IDs are strings like "ORD-1749..." — do NOT Number() them
     const id = String(req.params.id).trim();
@@ -1647,14 +2206,23 @@ app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
         return res.status(400).json({ success: false, error: 'Status invalid.' });
     }
     try {
+<<<<<<< HEAD
         const orders = JSON.parse(fs.readFileSync(FILE_ORDERS, 'utf-8'));
+=======
+        const orders = readOrders();
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         const idx = orders.findIndex(o => o.id === id);
         if (idx === -1) return res.status(404).json({ success: false, error: 'Comanda negasita.' });
         const prev = orders[idx].status;
         orders[idx].status = status;
         orders[idx].updatedAt = new Date().toISOString();
+<<<<<<< HEAD
         fs.writeFileSync(FILE_ORDERS, JSON.stringify(orders, null, 2));
         io.emit('order_status', { orderId: id, status, prev, updatedAt: orders[idx].updatedAt });
+=======
+        saveOrders(orders);
+        emitAdmin('order_status', { orderId: id, status, prev, updatedAt: orders[idx].updatedAt });
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         if (['preparing', 'shipped', 'delivered'].includes(status)) {
             await sendPushNotification(id, status);
         }
@@ -1669,25 +2237,51 @@ app.post('/api/admops/orders/:id/status', requireAdm, async (req, res) => {
 
 app.get('/api/admops/orders', requireAdm, (req, res) => {
     try {
+<<<<<<< HEAD
         res.json({ success: true, orders: JSON.parse(fs.readFileSync(FILE_ORDERS, 'utf-8')) });
+=======
+        res.json({ success: true, orders: readOrders() });
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch (e) {
         logger.error(`readOrders: ${e.message}`);
         res.status(500).json({ success: false, error: 'Nu am putut citi comenzile.' });
     }
 });
 
+<<<<<<< HEAD
 app.post('/api/push/subscribe', (req, res) => {
+=======
+app.post('/api/push/subscribe', requireAdm, (req, res) => {
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     try {
         const sub = req.body;
         if (!sub || !sub.endpoint) {
             return res.status(400).json({ success: false, error: 'Subscription invalid.' });
         }
+<<<<<<< HEAD
         const subs = readPushSubs();
         const exists = subs.find(s => s.endpoint === sub.endpoint);
         if (!exists) {
             subs.push(sub);
             savePushSubs(subs);
             logger.info(`Push subs crat: ${sub.endpoint.slice(0, 40)}...`);
+=======
+        const adminDeviceToken = req.session.deviceToken || deviceManager.getDeviceToken(req) || 'admin';
+        const adminSub = {
+            ...sub,
+            adminDeviceToken,
+            savedAt: new Date().toISOString()
+        };
+        const subs = readPushSubs();
+        const idx = subs.findIndex(s => s.endpoint === sub.endpoint);
+        if (idx === -1) {
+            subs.push(adminSub);
+            savePushSubs(subs);
+            logger.info(`Push subs crat: ${sub.endpoint.slice(0, 40)}...`);
+        } else {
+            subs[idx] = { ...subs[idx], ...adminSub };
+            savePushSubs(subs);
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         }
         res.json({ success: true });
     } catch (e) {
@@ -1696,7 +2290,11 @@ app.post('/api/push/subscribe', (req, res) => {
     }
 });
 
+<<<<<<< HEAD
 app.delete('/api/push/subscribe', (req, res) => {
+=======
+app.delete('/api/push/subscribe', requireAdm, (req, res) => {
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     try {
         const { endpoint } = req.body;
         if (!endpoint) return res.status(400).json({ success: false, error: 'Endpoint necesar.' });
@@ -1710,14 +2308,21 @@ app.delete('/api/push/subscribe', (req, res) => {
     }
 });
 
+<<<<<<< HEAD
 app.get('/api/vapid-key', (req, res) => {
     res.json({ success: true, publicKey: VAPID_PUBLIC || '' });
 });
 
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.get('/api/admops/vapid-key', requireAdm, (req, res) => {
     res.json({ success: true, publicKey: VAPID_PUBLIC || '' });
 });
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 app.post('/api/order', async (req, res) => {
     // Validate against raw input BEFORE sanitizeNoSQL — sanitize HTML-encodes characters
     // like ' → &#x27; and / → &#x2F; which then fail the validator regexes.
@@ -1767,8 +2372,19 @@ app.post('/api/order', async (req, res) => {
 
     try {
         saveOrder(order);
+<<<<<<< HEAD
         logger.info(`Comanda salvata: ${order.id} | ${customer.name} | ${total} MDL`);
         io.emit('new_order', order);
+=======
+<<<<<<< Updated upstream
+        log('INFO', `Comanda salvata: ${order.id} | ${customer.name} | ${total} MDL`);
+=======
+        logger.info(`Comanda salvata: ${order.id} | ${total} MDL`);
+        emitAdmin('new_order', order);
+        sendPushNotification(order.id, 'new_order')
+            .catch(e => logger.error(`Push comanda noua ${order.id}: ${e.message}`));
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch (e) {
         logger.error(`Salvare comanda: ${e.message}`);
         return res.status(500).json({ success: false, error: 'Eroare la salvarea comenzii.' });
@@ -1795,14 +2411,32 @@ app.post('/api/order', async (req, res) => {
         </table>
         <p style="text-align:right;font-size:1.1rem;font-weight:700;color:#aa0132;margin-top:10px;">Total: ${total} MDL</p>`;
 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+    try {
+        await mailer.sendMail({
+            from:    `Luci Boutique <${process.env.EMAIL_USER}>`,
+            to:      process.env.EMAIL_USER,
+            subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
+            html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     // Send emails in the background — do NOT block or fail the order on email errors
     (async () => {
         try {
             await mailer.sendMail({
                 from:    `Luci Boutique <${process.env.EMAIL_USER}>`,
+<<<<<<< HEAD
                 to:      process.env.EMAIL_USER,
                 subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
                 html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
+=======
+                to:      STORE_EMAIL,
+                subject: `Comanda noua: ${escHtml(customer.name)} — ${total} MDL`,
+                html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
                 <h2 style="color:#aa0132;">Comanda Noua</h2>
                 <p><strong>ID:</strong> ${order.id}</p>
                 <p><strong>Client:</strong> ${escHtml(customer.name)}</p>
@@ -1863,7 +2497,7 @@ app.post('/api/contact', async (req, res) => {
     try {
         await mailer.sendMail({
             from:    `Luci Boutique <${process.env.EMAIL_USER}>`,
-            to:      process.env.EMAIL_USER,
+            to:      STORE_EMAIL,
             subject: `Mesaj nou de la ${escHtml(name)}`,
             html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">
                 <h2 style="color:#aa0132;">Mesaj de Contact</h2>
@@ -1872,7 +2506,15 @@ app.post('/api/contact', async (req, res) => {
                 <p style="background:#f4f4f4;padding:15px;border-radius:8px;white-space:pre-wrap;">${escHtml(message)}</p>
             </div>`
         });
+<<<<<<< HEAD
         logger.info(`Contact de la ${name} (${ip})`);
+=======
+<<<<<<< Updated upstream
+        log('INFO', `Contact de la ${name} (${ip})`);
+=======
+        logger.info(`Contact form primit (${ip})`);
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         res.json({ success: true });
     } catch (e) {
         logger.error(`Email contact: ${e.message}`);
@@ -1903,11 +2545,23 @@ async function shutdown(signal) {
         logger.info(`Server oprit. (${signal})`);
         process.exit(0);
     } catch (e) {
+<<<<<<< HEAD
         if (e && /Server is not running/i.test(String(e.message || ''))) {
             logger.info(`Server deja oprit. (${signal})`);
             process.exit(0);
         }
         logger.error(`Eroare oprire: ${e.message}`);
+=======
+<<<<<<< Updated upstream
+        log('ERROR', `Eroare oprire: ${e.message}`);
+=======
+        if (e && /Server is not running/i.test(String(e.message || ''))) {
+            logger.info(`Server oprit.`);
+            process.exit(0);
+        }
+        logger.error(`Eroare oprire: ${e.message}`);
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         process.exit(1);
     }
 }
@@ -1929,6 +2583,22 @@ const io = new Server(server, {
         credentials: true
     }
 });
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+
+io.engine.use(sessionMiddleware);
+io.use((socket, next) => {
+    const sess = socket.request.session;
+    if (sess && sess.authenticated) return next();
+    next(new Error('unauthorized'));
+});
+
+function emitAdmin(event, payload) {
+    io.to('admin').emit(event, payload);
+}
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 process.stdin.on('data', chunk => {
     const cmd = chunk.toString().trim().toLowerCase();
@@ -1936,8 +2606,15 @@ process.stdin.on('data', chunk => {
 });
 
 io.on('connection', socket => {
+<<<<<<< HEAD
     socket.on('register_device', (token) => {
         if (typeof token !== 'string' || token.length !== 64) return; // sanity check
+=======
+    socket.join('admin');
+    socket.on('register_device', (token) => {
+        if (typeof token !== 'string' || token.length !== 64) return; // sanity check
+        if (socket.request.session?.deviceToken !== token) return;
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         // Leave any previous device room before joining the new one
         const prevRoom = [...socket.rooms].find(r => r.startsWith('device:'));
         if (prevRoom) socket.leave(prevRoom);
@@ -1948,17 +2625,55 @@ io.on('connection', socket => {
     socket.on('disconnect', () => logger.info(`WS disc: ${socket.id}`));
 });
 
+<<<<<<< HEAD
 server.listen(PORT, () => {
     logger.banner('Luci Boutique', '6.2', [
         { key: 'Port',         val: PORT },
         { key: 'Environment',  val: process.env.NODE_ENV || 'development' },
         { key: 'Admin URL',    val: `http://localhost:${PORT}/admops` },
+=======
+function isTrustedHttpsUrl(url) {
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+        const isLocal =
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host === '::1' ||
+            host.endsWith('.local');
+        return parsed.protocol === 'https:' && !isLocal;
+    } catch {
+        return false;
+    }
+}
+
+server.listen(PORT, () => {
+    const localUrl = `http://localhost:${PORT}`;
+    const publicUrl = normalizeSiteUrl(process.env.SITE_URL, localUrl);
+    const hasTrustedPublicUrl = isTrustedHttpsUrl(publicUrl);
+
+    logger.banner('Server Version', `${serverV}`, [
+        { key: 'Port',         val: PORT },
+        { key: 'Environment',  val: process.env.NODE_ENV || 'development' },
+        { key: 'Public URL',   val: hasTrustedPublicUrl ? publicUrl : 'not trusted - set SITE_URL=https://your-domain' },
+        { key: 'Admin URL',    val: hasTrustedPublicUrl ? `${publicUrl}/admops` : `${localUrl}/admops (dev only)` },
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
         { key: 'Email',        val: process.env.EMAIL_USER ? 'configured' : 'not set' },
         { key: 'Push (VAPID)', val: VAPID_PUBLIC ? 'configured' : 'disabled' },
     ]);
     logger.divider();
+<<<<<<< HEAD
     console.log(`  ➜  Local:   http://localhost:${PORT}`);
     console.log(`  ➜  Network: http://${require('os').hostname()}:${PORT}`);
+=======
+    if (hasTrustedPublicUrl) {
+        console.log(`  ➜  Public:  ${publicUrl}`);
+        console.log(`  ➜  Admin:   ${publicUrl}/admops`);
+    } else {
+        console.log(`  ➜  Local:   ${localUrl} (dev only)`);
+        console.log('  ⚠  HTTPS features need a trusted domain. Set SITE_URL=https://your-domain');
+    }
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     logger.divider();
 });
 
@@ -2039,4 +2754,9 @@ function generateInvoicePDF(order) {
 
         doc.end();
     });
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

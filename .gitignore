@@ -142,4 +142,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 LICENSE
+<<<<<<< Updated upstream
 env.example
+=======
+package-lock.json
+uploads/
+ecosystem.config.js
+>>>>>>> Stashed changes

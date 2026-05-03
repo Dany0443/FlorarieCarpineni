@@ -1,6 +1,6 @@
 {
-  "name": "luciboutique",
-  "version": "2.1.0",
+  "name": "uflower",
+  "version": "2.4.2",
   "description": "Luci Boutique",
   "main": "server.js",
   "scripts": {

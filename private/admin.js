@@ -4,6 +4,10 @@ let conditionalAbortController = null;
 
 const toBase64Url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 const b64urlToBuffer = b64url => { if (!b64url) return null; const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/'); const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='); return Uint8Array.from(atob(padded), c => c.charCodeAt(0)); };
+<<<<<<< HEAD
+=======
+const urlBase64ToUint8Array = b64urlToBuffer;
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 function getSoundVolume() {
     const v = parseFloat(localStorage.getItem('admin_sound_vol'));
@@ -177,13 +181,56 @@ async function initAdmin() {
     try {
         const r = await fetch('/api/admops/orders', { credentials: 'include' });
         if (r.status === 401) { redirectToLogin(); }
+<<<<<<< HEAD
         else { showAdmin(); }
+=======
+        else {
+            showAdmin();
+            initAdminPushNotifications();
+        }
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
     } catch { redirectToLogin(); }
     finally {
         if (loader) { loader.classList.add('hidden'); setTimeout(() => loader.remove(), 520); }
     }
 }
 
+<<<<<<< HEAD
+=======
+async function initAdminPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+    if (Notification.permission === 'denied') return;
+
+    try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        if (Notification.permission === 'default') {
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') return;
+        }
+
+        const keyRes = await fetch('/api/admops/vapid-key', { credentials: 'include' });
+        const keyData = await keyRes.json();
+        if (!keyData.success || !keyData.publicKey) return;
+
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing || await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+        });
+
+        await fetch('/api/push/subscribe', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub.toJSON())
+        });
+        console.log('[Push] Admin notifications ready');
+    } catch (e) {
+        console.warn('[Push] Admin subscribe failed:', e);
+    }
+}
+
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAdmin);
 } else {
@@ -2002,4 +2049,8 @@ if (adminThemeToggle) {
         localStorage.setItem('admin_theme', newTheme);
         adminThemeToggle.setAttribute('data-active', isDark ? 'false' : 'true');
     });
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)

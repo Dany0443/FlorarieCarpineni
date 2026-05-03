@@ -1,7 +1,12 @@
 'use strict';
 
+<<<<<<< HEAD
 const fs   = require('fs');
 const path = require('path');
+=======
+const path = require('path');
+const secureStore = require('./secureStore');
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
 const FILE = path.join(__dirname, '..', 'data', 'telemetry.json');
 const CACHE_TTL = 60 * 1000; // 60 seconds
@@ -14,6 +19,7 @@ function readEvents() {
     const now = Date.now();
     if (_cache && now - _cacheTime < CACHE_TTL) return _cache;
 
+<<<<<<< HEAD
     let events = [];
     try {
         const raw = fs.readFileSync(FILE, 'utf-8').trim();
@@ -22,6 +28,10 @@ function readEvents() {
     } catch (_) {
         events = [];
     }
+=======
+    let events = secureStore.readJson(FILE, []);
+    if (!Array.isArray(events)) events = [];
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 
     _cache     = events;
     _cacheTime = now;

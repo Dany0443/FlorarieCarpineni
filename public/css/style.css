@@ -170,11 +170,16 @@ textarea {
   justify-content: center;
 }
 
+<<<<<<< HEAD
 .navbar.nav-hidden,
 .navbar.nav-visible {
   transform: none;
 }
 
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 [data-theme="dark"] .navbar {
   background: rgba(14, 13, 12, 0.85);
 }
@@ -508,6 +513,10 @@ textarea {
   }
 }
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 2e64749 (Update storefront, admin security, sharing, and caching)
 .nav-container {
   width: 90%;
   max-width: 1200px;
@@ -678,7 +687,7 @@ textarea {
   min-height: 100svh;
   padding: 70px 20px 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
   overflow: hidden;
@@ -688,6 +697,7 @@ textarea {
 .hero-container {
   width: 100%;
   max-width: 1200px;
+  margin-top: clamp(118px, 15svh, 168px);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
@@ -701,6 +711,7 @@ textarea {
   padding-right: 20px;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .hero-visual {
@@ -828,10 +839,10 @@ textarea {
 
 .hero-blob {
   position: absolute;
-  top: -20%;
-  right: -10%;
-  width: 600px;
-  height: 600px;
+  top: calc(70px + clamp(118px, 15svh, 168px) - 126px);
+  left: calc(50% - 700px);
+  width: 360px;
+  height: 360px;
   background: radial-gradient(circle, var(--glow-primary) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 1;
@@ -1320,6 +1331,14 @@ a.contact-card-link:hover {
   transition: var(--transition-theme);
 }
 
+.modal-content.modal-compact {
+  height: 455px;
+}
+
+.modal-content.modal-roomy {
+  height: clamp(500px, 58svh, 560px);
+}
+
 .modal-close {
   position: absolute;
   top: 15px;
@@ -1368,6 +1387,7 @@ a.contact-card-link:hover {
   padding: 36px 40px 32px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1900,6 +1920,7 @@ body.cart-open .lb-controls {
   .hero-container {
     grid-template-columns: 1fr;
     gap: 40px;
+    margin-top: 0;
   }
 
   .hero-text-content {
@@ -1936,11 +1957,12 @@ body.cart-open .lb-controls {
   }
 
   .hero-blob {
-    width: 300px;
-    height: 300px;
-    top: 5%;
-    right: 50%;
-    transform: translateX(50%);
+    width: 250px;
+    height: 250px;
+    top: 46px;
+    left: -54px;
+    right: auto;
+    transform: none;
   }
 
   .services-grid {
@@ -1978,6 +2000,7 @@ body.cart-open .lb-controls {
     flex-direction: column;
     width: 92%;
     max-height: 92svh;
+    min-height: 0;
     height: auto;
     overflow: hidden;
   }
@@ -2162,8 +2185,9 @@ body.cart-open .lb-controls {
 
 @media (max-width: 480px) {
   .hero {
-    padding-top: 70px;
-    align-items: center;
+    min-height: calc(100svh - 70px);
+    padding: clamp(88px, 11svh, 116px) 20px 0;
+    align-items: flex-start;
   }
 
   .hero-container {
@@ -2180,8 +2204,12 @@ body.cart-open .lb-controls {
   .subtitle { order: 1; text-align: left; width: 100%; }
   .title { order: 2; text-align: left; width: 100%; }
   .desc { order: 3; max-width: 100%; margin-bottom: 0; text-align: left; width: 100%; }
-  .hero-visual { order: 4; width: 100%; margin: 1.2rem 0; }
+  .hero-visual { order: 4; width: 100%; margin: 1.25rem 0 1.05rem; }
   .hero-buttons { order: 5; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; padding-bottom: 8px; }
+  .subtitle { margin-bottom: 0.85rem; }
+  .title { margin-bottom: 1.25rem; }
+  .desc { font-size: 1.08rem; line-height: 1.45; }
+  .hero-img { border-radius: 22px; }
 
   .cta-btn.hero-main-btn,
   .secondary-btn {
