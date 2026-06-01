@@ -9,16 +9,40 @@ const LuciUI = (function(window, document) {
         const loader = document.getElementById('loader');
         if (!loader) return;
 
+        if (loader.dataset.lbHandled === 'true') return;
+        loader.dataset.lbHandled = 'true';
+
+        const startedAt = (window.performance && typeof window.performance.now === 'function')
+            ? window.performance.now()
+            : Date.now();
+        const minVisibleMs = window.innerWidth > 900 ? 450 : 320;
+        const maxWaitMs = 12000;
+        let dismissed = false;
+
         const dismissLoader = () => {
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.classList.add('hidden');
-                setTimeout(() => loader.remove(), 520);
-            }
+            if (dismissed) return;
+            dismissed = true;
+            const node = document.getElementById('loader');
+            if (!node) return;
+            node.classList.add('hidden');
+            setTimeout(() => {
+                if (node && node.parentNode) node.parentNode.removeChild(node);
+            }, 520);
         };
 
-        const waitForImages = () => {
-            const imgs = Array.from(document.querySelectorAll('img'));
+        const dismissWithMinimumDelay = () => {
+            const now = (window.performance && typeof window.performance.now === 'function')
+                ? window.performance.now()
+                : Date.now();
+            const elapsed = now - startedAt;
+            const waitMore = Math.max(0, minVisibleMs - elapsed);
+            setTimeout(dismissLoader, waitMore);
+        };
+
+        const waitForCriticalImages = () => {
+            const imgs = Array.from(document.querySelectorAll('img')).filter(img => {
+                return (img.getAttribute('loading') || '').toLowerCase() !== 'lazy';
+            });
             return Promise.all(imgs.map(img => {
                 if (img.complete) return Promise.resolve();
                 return new Promise(resolve => {
@@ -28,29 +52,17 @@ const LuciUI = (function(window, document) {
             }));
         };
 
-        const waitForModels = () => {
-            const viewers = Array.from(document.querySelectorAll('model-viewer'));
-            return Promise.all(viewers.map(v => new Promise(resolve => {
-                v.addEventListener('load', resolve, { once: true });
-                v.addEventListener('error', resolve, { once: true });
-                setTimeout(resolve, 3000); // Max wait
-            })));
-        };
-
-        const domReady = new Promise(resolve => {
-            if (document.readyState !== 'loading') resolve();
-            else document.addEventListener('DOMContentLoaded', resolve, { once: true });
-        });
-
         const windowLoad = new Promise(resolve => {
             if (document.readyState === 'complete') resolve();
             else window.addEventListener('load', resolve, { once: true });
         });
 
-        Promise.all([domReady, windowLoad, waitForImages(), waitForModels()])
-            .finally(() => {
-                dismissLoader();
-            });
+        const hardTimeout = new Promise(resolve => setTimeout(resolve, maxWaitMs));
+
+        Promise.race([
+            Promise.all([windowLoad, waitForCriticalImages()]),
+            hardTimeout
+        ]).finally(dismissWithMinimumDelay);
     }
 
     
@@ -108,16 +120,17 @@ const LuciUI = (function(window, document) {
 
     function initBottomSheet() {
         if (window.innerWidth > 1024) return;
+        const isTabletPanel = window.innerWidth >= 769;
 
         const backdrop = document.createElement('div');
-        backdrop.className = 'lb-sheet-backdrop';
+        backdrop.className = `lb-sheet-backdrop${isTabletPanel ? ' tablet-panel' : ''}`;
         document.body.appendChild(backdrop);
 
         const sheet = document.createElement('div');
-        sheet.className = 'lb-bottom-sheet lb-sheet';
+        sheet.className = `lb-bottom-sheet lb-sheet${isTabletPanel ? ' lb-side-sheet' : ''}`;
         sheet.innerHTML = `
             <div class="lb-sheet-handle"></div>
-            <div class="lb-sheet-title">Limbă & Temă</div>
+            <div class="lb-sheet-title" data-i18n="sheet_lang_theme">Limbă & Temă</div>
             <div class="lang-group">
                 <button class="lang-btn" data-lang="ro">RO</button>
                 <button class="lang-btn" data-lang="en">EN</button>
@@ -186,12 +199,14 @@ const LuciUI = (function(window, document) {
             }
         });
 
-        // Swipe down to close
-        let touchY = 0;
-        sheet.addEventListener('touchstart', e => touchY = e.touches[0].clientY, { passive: true });
-        sheet.addEventListener('touchend', e => {
-            if (e.changedTouches[0].clientY - touchY > 50) closeSheet();
-        }, { passive: true });
+        // Swipe down to close (phone only)
+        if (!isTabletPanel) {
+            let touchY = 0;
+            sheet.addEventListener('touchstart', e => touchY = e.touches[0].clientY, { passive: true });
+            sheet.addEventListener('touchend', e => {
+                if (e.changedTouches[0].clientY - touchY > 50) closeSheet();
+            }, { passive: true });
+        }
     }
 
     /**
@@ -207,15 +222,45 @@ const LuciUI = (function(window, document) {
             }
             _vtBusy = true;
             const t = document.startViewTransition(callback);
-            t.finished.finally(() => { _vtBusy = false; });
+            Promise.resolve(t.finished)
+                .catch(() => {})
+                .finally(() => { _vtBusy = false; });
             return t;
         }
         callback();
     }
 
-    function init() {
-        initLoader();
+    function initViewportUnit() {
+        const setVh = () => {
+            const viewportHeight = window.visualViewport?.height || window.innerHeight;
+            document.documentElement.style.setProperty('--app-vh', `${viewportHeight * 0.01}px`);
+        };
 
+        let rafId = null;
+        const schedule = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                setVh();
+                if (typeof window.syncActiveModalLayout === 'function') {
+                    window.syncActiveModalLayout();
+                }
+            });
+        };
+
+        setVh();
+        window.addEventListener('resize', schedule, { passive: true });
+        window.addEventListener('orientationchange', schedule, { passive: true });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', schedule, { passive: true });
+            window.visualViewport.addEventListener('scroll', schedule, { passive: true });
+        }
+    }
+
+    function init() {
+        initViewportUnit();
+        initLoader();
+        initBottomSheet();
     }
 
     return {
@@ -260,7 +305,7 @@ const cartTotalEl = document.getElementById('cart-total');
 const cartCountEl = document.getElementById('cart-count');
 const checkoutBtn = document.getElementById('checkout-btn');
 
-const modal = document.getElementById('product-modal');
+    const modal = document.getElementById('product-modal');
 const modalImg = modal?.querySelector('.modal-img');
 const modalTitle = modal?.querySelector('.modal-title');
 const modalPrice = modal?.querySelector('.modal-price');
@@ -326,8 +371,26 @@ function _stopFpsMeasureAndSend(deviceType) {
     });
 }
 
+const MAX_FLOWERS_PER_ORDER = 25;
 let cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
 let currentCategory = 'all';
+
+function normalizeCart(rawCart) {
+    if (!Array.isArray(rawCart)) return [];
+    const out = [];
+    let totalQty = 0;
+    for (const item of rawCart) {
+        if (!item) continue;
+        const qty = Math.max(1, Math.min(MAX_FLOWERS_PER_ORDER, Math.floor(Number(item.qty) || 1)));
+        if (totalQty + qty > MAX_FLOWERS_PER_ORDER) break;
+        out.push({ ...item, qty });
+        totalQty += qty;
+    }
+    return out;
+}
+
+cart = normalizeCart(cart);
+try { localStorage.setItem('flowerCart', JSON.stringify(cart)); } catch (_) {}
 
 function trackTelemetry(event, data) {
     try {
@@ -371,12 +434,12 @@ function versionedAssetUrl(url) {
 
 function readProductCache() {
     const cached = readLocalJson(PRODUCT_CACHE_KEY);
-    if (!cached || !Array.isArray(cached.products) || !cached.products.length) return null;
+    if (!cached || !Array.isArray(cached.products)) return null;
     return cached;
 }
 
 function saveProductCache(products, fingerprint) {
-    if (!Array.isArray(products) || !products.length || !fingerprint) return;
+    if (!Array.isArray(products) || !fingerprint) return;
     writeLocalJson(PRODUCT_CACHE_KEY, {
         fingerprint,
         products,
@@ -427,12 +490,14 @@ async function clearStorefrontAssetCaches() {
     await Promise.allSettled(tasks);
 }
 
-async function checkStorefrontLease() {
+async function checkStorefrontLease(options = {}) {
+    const forceServerCheck = options.forceServerCheck === true;
     const storedLease = readAssetLease();
     const now = Date.now();
     const embeddedFingerprint = window.__shareFingerprint || '';
 
     if (
+        !forceServerCheck &&
         storedLease &&
         storedLease.expiresAt > now &&
         (!embeddedFingerprint || embeddedFingerprint === storedLease.fingerprint)
@@ -470,17 +535,20 @@ async function checkStorefrontLease() {
 }
 
 async function loadStorefrontProducts() {
-    const lease = await checkStorefrontLease();
     const cached = readProductCache();
+    const knownFingerprint =
+        storefrontFingerprint ||
+        readAssetLease()?.fingerprint ||
+        cached?.fingerprint ||
+        '';
 
-    if (
-        lease.fingerprint &&
-        lease.leased &&
-        !lease.changed &&
-        cached?.fingerprint === lease.fingerprint &&
-        Array.isArray(cached.products)
-    ) {
-        console.info(`[LB cache] products from local lease: ${lease.fingerprint}`);
+    const lease = await checkStorefrontLease({ forceServerCheck: true });
+    const leaseFingerprint = lease?.fingerprint || knownFingerprint;
+    const fingerprintChanged = Boolean(knownFingerprint && leaseFingerprint && knownFingerprint !== leaseFingerprint);
+
+    if (!fingerprintChanged && cached && cached.fingerprint === leaseFingerprint) {
+        storefrontFingerprint = leaseFingerprint;
+        console.info(`[LB cache] products from local cache: ${leaseFingerprint}`);
         return cached.products;
     }
 
@@ -490,8 +558,8 @@ async function loadStorefrontProducts() {
             { cache: 'no-store', credentials: 'same-origin' },
             4500
         );
-        if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
-            const fingerprint = data.fingerprint || lease.fingerprint;
+        if (data && data.success && Array.isArray(data.products)) {
+            const fingerprint = data.fingerprint || leaseFingerprint;
             if (fingerprint) {
                 saveAssetLease(fingerprint, data.leaseMs);
                 saveProductCache(data.products, fingerprint);
@@ -499,16 +567,22 @@ async function loadStorefrontProducts() {
             console.info(`[LB cache] products fresh${fingerprint ? `: ${fingerprint}` : ''}`);
             return data.products;
         }
+        throw new Error('invalid products payload');
     } catch (err) {
         console.info('[LB cache] products API unavailable, falling back.', err?.message || err);
     }
 
-    if (cached?.products?.length) {
+    if (cached && Array.isArray(cached.products)) {
         console.info('[LB cache] products from previous local cache.');
         return cached.products;
     }
 
     return bundledProducts();
+}
+
+function getActiveFilterCategory() {
+    const activeBtn = document.querySelector('.filter-btn.active');
+    return activeBtn?.dataset?.filter || currentCategory || 'all';
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -520,15 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.documentElement.lang = forcedLang;
     }
 
-    setTimeout(() => {
-        const loader = document.getElementById('loader');
-        if(loader) {
-            loader.classList.add('hidden');
-            setTimeout(() => loader.remove(), 500);
-        }
-    }, 800);
-
-    // Produsele vin fresh doar cand expira lease-ul; altfel folosim cache/local fallback.
+    // Backend is primary source; local cache/bundled file are fallback when API is unavailable.
     allProducts = await loadStorefrontProducts();
 
     if(productContainer) {
@@ -544,30 +610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (i < 4) link.setAttribute('fetchpriority', 'high');
         document.head.appendChild(link);
     });
-
-    // Also warm the service worker cache for offline/return visits
-    if ('serviceWorker' in navigator) {
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (!refreshing) {
-                refreshing = true;
-                window.location.reload();
-            }
-        });
-
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-            console.log('SW inregistrat cu succes:', reg.scope);
-            const sendPreload = (sw) => {
-                if (sw) sw.postMessage({ type: 'PRELOAD_IMAGES', urls: imageUrls });
-            };
-            if (navigator.serviceWorker.controller) {
-                sendPreload(navigator.serviceWorker.controller);
-            } else {
-                navigator.serviceWorker.ready.then(r => sendPreload(r.active));
-            }
-        }).catch(err => console.log('Eroare SW:', err));
-
-    }
 
     updateCartUI();
     // setupScrollAnimations(); // Replaced by LuciUI.refreshReveal()
@@ -585,6 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         setTimeout(preload3DModels, 2000);
     }
+
 });
 
 // pastram in cache sa se miste oleaca mai repede
@@ -813,10 +856,33 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
-        trackTelemetry('click', { label: `filter:${e.target.dataset.filter || 'all'}` });
         renderProducts(e.target.dataset.filter);
     });
 });
+
+function syncMobileModalLayout(resetScroll = false) {
+    if (!modal?.classList.contains('active') || window.innerWidth > 768) return;
+    const modalBox = modal.querySelector('.modal-content');
+    const modalDetails = modal.querySelector('.modal-details');
+    const textBlock = modal.querySelector('.modal-text-block');
+    if (!modalBox || !modalDetails || !textBlock) return;
+
+    modalBox.classList.remove('modal-mobile-scroll');
+    if (resetScroll) {
+        modalDetails.scrollTop = 0;
+        textBlock.scrollTop = 0;
+    }
+
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const maxAllowed = Math.floor(viewportHeight * 0.92);
+    const naturalHeight = Math.ceil(modalBox.scrollHeight);
+
+    if (naturalHeight > maxAllowed) {
+        modalBox.classList.add('modal-mobile-scroll');
+    }
+}
+
+window.syncActiveModalLayout = syncMobileModalLayout;
 
 function openModal(id, fromUserGesture) {
     const product = allProducts.find(p => p.id === id);
@@ -824,7 +890,7 @@ function openModal(id, fromUserGesture) {
     activeProductId = id;
     const modalBox = modal.querySelector('.modal-content');
     const modalDetails = modal.querySelector('.modal-details');
-    modalBox?.classList.remove('modal-compact', 'modal-roomy');
+    modalBox?.classList.remove('modal-compact', 'modal-roomy', 'modal-mobile-scroll');
     if (fromUserGesture) {
         trackTelemetry('product_view', { productId: String(product.id), productName: product.name, price: Number(product.price) || 0 });
     }
@@ -844,12 +910,24 @@ function openModal(id, fromUserGesture) {
     const existingShareBtn = document.querySelector('.btn-share');
     if(existingShareBtn) existingShareBtn.remove();
 
+    const isMobileModal = window.innerWidth <= 768;
+    const actionsRow = modal.querySelector('.modal-actions-row');
+    const textBlock = modal.querySelector('.modal-text-block');
+
     if (product.model3d) {
         const btn3d = document.createElement('button');
         btn3d.className = 'btn-3d';
         btn3d.innerHTML = t('modal_3d');
         btn3d.onclick = () => open3DModal(product.model3d);
-        document.querySelector('.modal-text-block')?.appendChild(btn3d);
+        if (isMobileModal && actionsRow) {
+            if (modalAddBtn && actionsRow.contains(modalAddBtn)) {
+                actionsRow.insertBefore(btn3d, modalAddBtn);
+            } else {
+                actionsRow.appendChild(btn3d);
+            }
+        } else {
+            textBlock?.appendChild(btn3d);
+        }
     }
 
     const shareBtn = document.createElement('button');
@@ -857,7 +935,7 @@ function openModal(id, fromUserGesture) {
     shareBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
     shareBtn.onclick = () => {
         const lang = ['ro', 'en', 'ru'].includes(window.__lang) ? window.__lang : 'ro';
-        const shareUrl = `${window.location.origin}/product/${product.id}?lang=${lang}`;
+        const shareUrl = `${window.location.origin}/?product=${product.id}&lang=${lang}`;
         const shareText = `${product.name} - ${product.price} MDL\n${getProductText(product, 'desc')}`;
 
         if (navigator.share) {
@@ -874,7 +952,7 @@ function openModal(id, fromUserGesture) {
             showNotification(t('notif_link_copied'));
         }
     };
-    document.querySelector('.modal-actions-row')?.appendChild(shareBtn);
+    actionsRow?.appendChild(shareBtn);
 
     const inCartItem = cart.find(item => item.id === product.id);
     modalAddBtn.innerText = inCartItem ? `${t('modal_add_more')} (${inCartItem.qty})` : t('modal_add');
@@ -909,16 +987,16 @@ function openModal(id, fromUserGesture) {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
+    if (isMobileModal) {
+        requestAnimationFrame(() => syncMobileModalLayout(true));
+    }
+
     const pageUrl = new URL(window.location.href);
     const lang = ['ro', 'en', 'ru'].includes(window.__lang) ? window.__lang : 'ro';
-    if (pageUrl.pathname.match(/^\/product\/\d+\/?$/)) {
-        pageUrl.pathname = `/product/${product.id}`;
-        pageUrl.search = '';
-        pageUrl.searchParams.set('lang', lang);
-    } else {
-        pageUrl.searchParams.set('product', product.id);
-        pageUrl.searchParams.set('lang', lang);
-    }
+    pageUrl.pathname = '/';
+    pageUrl.search = '';
+    pageUrl.searchParams.set('product', product.id);
+    pageUrl.searchParams.set('lang', lang);
     window.history.replaceState({}, '', pageUrl);
 }
 
@@ -926,6 +1004,7 @@ function closeModal() {
     if(!modal) return;
     activeProductId = null;
     modal.classList.remove('active');
+    modal.querySelector('.modal-content')?.classList.remove('modal-mobile-scroll');
     document.body.style.overflow = '';
 
     const url = new URL(window.location.href);
@@ -1111,12 +1190,25 @@ function addToCart(id) {
     if(!product) return;
 
     const existingItem = cart.find(item => item.id === id);
+    const totalQty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
 
     if (existingItem) {
+        if (existingItem.qty >= MAX_FLOWERS_PER_ORDER) {
+            showNotification(`Maxim ${MAX_FLOWERS_PER_ORDER} bucăți per produs.`);
+            return;
+        }
+        if (totalQty >= MAX_FLOWERS_PER_ORDER) {
+            showNotification(`Maxim ${MAX_FLOWERS_PER_ORDER} flori per comandă.`);
+            return;
+        }
         existingItem.qty++;
         trackTelemetry('cart_add', { productId: String(product.id), productName: product.name, qty: existingItem.qty });
         showNotification(t('notif_more', { name: product.name, qty: existingItem.qty }));
     } else {
+        if (totalQty >= MAX_FLOWERS_PER_ORDER) {
+            showNotification(`Maxim ${MAX_FLOWERS_PER_ORDER} flori per comandă.`);
+            return;
+        }
         cart.push({ ...product, qty: 1 });
         trackTelemetry('cart_add', { productId: String(product.id), productName: product.name, qty: 1 });
         showNotification(t('notif_added', { name: product.name }));
@@ -1171,6 +1263,7 @@ function refreshProductButtons() {
 
 function saveCart() {
     try {
+        cart = normalizeCart(cart);
         localStorage.setItem('flowerCart', JSON.stringify(cart));
     } catch(e) {
         showNotification(t('notif_cart_err'));

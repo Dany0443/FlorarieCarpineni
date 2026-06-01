@@ -5,6 +5,7 @@ const secureStore = require('./secureStore');
 
 const FILE = path.join(__dirname, '..', 'data', 'telemetry.json');
 const CACHE_TTL = 60 * 1000; // 60 seconds
+const MAX_CART_ADD_QTY = 25;
 
 let _cache     = null;
 let _cacheTime = 0;
@@ -33,6 +34,55 @@ function dayKey(tsMs) {
     return new Date(tsMs).toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
+function normalizeProductId(val) {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.floor(n));
+}
+
+function clampQty(val, min, max) {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return null;
+    return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function decodeTelemetryText(val) {
+    if (val == null) return '';
+    return String(val)
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#x2F;/gi, '/');
+}
+
+function telemetryPathOnly(val) {
+    const raw = decodeTelemetryText(val).trim();
+    if (!raw) return '/';
+    let pathname = '/';
+    try {
+        pathname = new URL(raw, 'https://local.invalid').pathname || '/';
+    } catch (_) {
+        pathname = raw.split('?')[0].split('#')[0] || '/';
+    }
+    if (!pathname.startsWith('/')) pathname = `/${pathname}`;
+    pathname = pathname.replace(/\/{2,}/g, '/').trim();
+    pathname = pathname.replace(/[\u0000-\u001f\u007f]/g, '');
+    return pathname.slice(0, 200) || '/';
+}
+
+function isAdminTelemetryPath(val) {
+    const p = telemetryPathOnly(val).toLowerCase();
+    return p === '/admops'
+        || p.startsWith('/admops/')
+        || p === '/login'
+        || p.startsWith('/private/')
+        || p === '/private/admin.html';
+}
+
 function last30Days() {
     const days = [];
     const now  = new Date();
@@ -54,13 +104,11 @@ function getDailySummary() {
     const seen    = {};
     days.forEach(d => { counts[d] = 0; seen[d] = new Set(); });
 
-    
     events
-        events
         .filter(e => {
-        if (e.event !== 'page_view') return false;
-        const url = (e.data && e.data.url) || '';
-        return !url.includes('/admops');
+            if (e.event !== 'page_view') return false;
+            const url = (e.data && e.data.url) || '';
+            return !isAdminTelemetryPath(url);
         })
         .forEach(e => {
             const d = dayKey(e.serverTs || e.ts || Date.now());
@@ -82,21 +130,36 @@ function getTopProducts() {
     const views   = {};
     const adds    = {};
     const names   = {};
-    const seen   = {};
+    const seenViews = {};
+    const addBySessionAndProduct = new Map();
 
     events.forEach(e => {
-        const id    = e.data && e.data.productId;
+        const id    = normalizeProductId(e.data && e.data.productId);
         const name  = e.data && e.data.productName;
         const sid   = e.sessionId || (e.data && e.data.sessionId);
         if (!id) return;
         if (name) names[id] = name;
         if (e.event === 'product_view') {
-            if (!seen[id]) seen[id] = new Set();
-            if (sid && !seen[id].has(sid)) { seen[id].add(sid); views[id] = (views[id] || 0) + 1; }
+            if (!seenViews[id]) seenViews[id] = new Set();
+            if (sid && !seenViews[id].has(sid)) { seenViews[id].add(sid); views[id] = (views[id] || 0) + 1; }
             else if (!sid) views[id] = (views[id] || 0) + 1;
         }
-        if (e.event === 'cart_add') adds[id] = (adds[id] || 0) + 1;
+        if (e.event === 'cart_add') {
+            const qty = clampQty(e.data && e.data.qty, 1, MAX_CART_ADD_QTY) || 1;
+            if (sid) {
+                const key = `${sid}|${id}`;
+                const prevQty = addBySessionAndProduct.get(key) || 0;
+                if (qty > prevQty) addBySessionAndProduct.set(key, qty);
+            } else {
+                adds[id] = (adds[id] || 0) + qty;
+            }
+        }
     });
+
+    for (const [key, qty] of addBySessionAndProduct.entries()) {
+        const id = key.split('|')[1];
+        adds[id] = (adds[id] || 0) + qty;
+    }
 
     const allIds = [...new Set([...Object.keys(views), ...Object.keys(adds)])];
     return allIds

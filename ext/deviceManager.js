@@ -32,7 +32,7 @@ function saveDevices(devices) {
  * which the UA string alone can't distinguish from Chrome.
  * Admin can always rename devices manually.
  */
-function detectDeviceName(userAgent, secChUa) {
+function detectDeviceName(userAgent, secChUa, secChUaFullVersionList) {
     if (!userAgent) return 'Dispozitiv necunoscut';
 
     // ── OS ────────────────────────────────────────────────────────────────────
@@ -51,12 +51,13 @@ function detectDeviceName(userAgent, secChUa) {
 
     // 1. Sec-CH-UA brand list — most reliable for Chromium-based browsers.
     //    Brave, Edge, Opera all send their real name here; plain Chrome does not include them.
-    if (secChUa) {
-        if (/Brave/i.test(secChUa))           { browser = 'Brave';   }
-        else if (/"Opera"|OPR/i.test(secChUa)){ browser = 'Opera';   }
-        else if (/Microsoft Edge/i.test(secChUa)) { browser = 'Edge'; }
-        else if (/Chromium/i.test(secChUa))   { browser = 'Chrome';  }
-        else if (/Google Chrome/i.test(secChUa)) { browser = 'Chrome'; }
+    const brandHints = [secChUa, secChUaFullVersionList].filter(Boolean).join(' ');
+    if (brandHints) {
+        if (/Brave/i.test(brandHints))           { browser = 'Brave';   }
+        else if (/"Opera"|OPR/i.test(brandHints)){ browser = 'Opera';   }
+        else if (/Microsoft Edge/i.test(brandHints)) { browser = 'Edge'; }
+        else if (/Chromium/i.test(brandHints))   { browser = 'Chrome';  }
+        else if (/Google Chrome/i.test(brandHints)) { browser = 'Chrome'; }
     }
 
     // 2. UA string fallbacks (used when Sec-CH-UA is absent — Firefox, Safari, older browsers)
@@ -94,13 +95,40 @@ function detectDeviceName(userAgent, secChUa) {
  * - Otherwise → create a new device record.
  * Returns the (possibly new) device object.
  */
-function upsertDevice(existingToken, { ip, userAgent, secChUa, authMethod, passkeyCredId } = {}) {
+function upsertDevice(existingToken, { ip, userAgent, secChUa, secChUaFullVersionList, authMethod, passkeyCredId } = {}) {
     const devices = readDevices();
     let device = existingToken ? devices.find(d => d.token === existingToken) : null;
+    const detectedName = detectDeviceName(userAgent, secChUa, secChUaFullVersionList);
+    const nowMs = Date.now();
+
+    // If token is missing/stale (ex: devices.json reset), try to reuse an existing record
+    // instead of creating duplicates on every login.
+    if (!device && passkeyCredId) {
+        device = devices.find(d => d && d.passkeyCredId === passkeyCredId) || null;
+    }
+    if (!device && ip && detectedName && detectedName !== 'Dispozitiv necunoscut') {
+        device = devices.find(d => {
+            if (!d || d.name !== detectedName || d.lastIp !== ip) return false;
+            const seenAt = new Date(d.lastSeen || d.createdAt || 0).getTime();
+            return Number.isFinite(seenAt) && (nowMs - seenAt) < (7 * 24 * 60 * 60 * 1000);
+        }) || null;
+    }
 
     if (device) {
+        if (!Array.isArray(device.authMethods)) device.authMethods = [];
         device.lastSeen = new Date().toISOString();
         if (ip)         device.lastIp = ip;
+        if (detectedName && detectedName !== 'Dispozitiv necunoscut' && detectedName !== device.name) {
+            const oldBrowser = /\(([^)]+)\)$/.exec(device.name || '')?.[1] || '';
+            const newBrowser = /\(([^)]+)\)$/.exec(detectedName)?.[1] || '';
+            const isUpgrade = oldBrowser === 'Browser'
+                || oldBrowser === 'Chrome'
+                || oldBrowser === 'necunoscut'
+                || newBrowser === 'Brave'
+                || newBrowser === 'Edge'
+                || newBrowser === 'Opera';
+            if (isUpgrade) device.name = detectedName;
+        }
         if (authMethod && !device.authMethods.includes(authMethod)) {
             device.authMethods.push(authMethod);
         }
@@ -109,9 +137,12 @@ function upsertDevice(existingToken, { ip, userAgent, secChUa, authMethod, passk
             if (!device.authMethods.includes('passkey')) device.authMethods.push('passkey');
         }
     } else {
+        const stableToken = (typeof existingToken === 'string' && existingToken.trim())
+            ? existingToken.trim().slice(0, 128)
+            : crypto.randomBytes(32).toString('hex');
         device = {
-            token:       crypto.randomBytes(32).toString('hex'),
-            name:        detectDeviceName(userAgent, secChUa),
+            token:       stableToken,
+            name:        detectedName,
             createdAt:   new Date().toISOString(),
             lastSeen:    new Date().toISOString(),
             lastIp:      ip || null,

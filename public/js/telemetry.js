@@ -6,21 +6,17 @@
         try { return crypto.randomUUID(); } catch (_) {}
         return 'ss-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
     }
-    var SESSION_ID;
-    try {
-        SESSION_ID = sessionStorage.getItem('_lt_sid') || genSessionId();
-        sessionStorage.setItem('_lt_sid', SESSION_ID);
-    } catch (_) {
-        SESSION_ID = genSessionId();
-    }
+    var SESSION_ID = genSessionId();
+    var privacyOptOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1';
 
     // ── Settings cache ────────────────────────────────────────────────────────
-    var settings = { enabled: true, errors: true, performance: true, clicks: true, td3: true, checkout: true };
+    var settings = { enabled: !privacyOptOut, errors: true, performance: true, clicks: false, td3: true, checkout: true };
     // Fetch settings async — does not block anything
     fetch('/api/telemetry-settings').then(function (r) {
         return r.ok ? r.json() : null;
     }).then(function (d) {
         if (d && d.settings) settings = Object.assign(settings, d.settings);
+        if (privacyOptOut) settings.enabled = false;
     }).catch(function () {});
 
     // ── Batch & flush ─────────────────────────────────────────────────────────
@@ -67,12 +63,11 @@
     // ── Auto page_view ────────────────────────────────────────────────────────
     var pageStart = Date.now();
     push('page_view', {
-        url: W.location.href,
-        referrer: D.referrer,
-        screen: W.screen.width + 'x' + W.screen.height,
-        dpr: W.devicePixelRatio || 1,
-        connection: (navigator.connection && navigator.connection.effectiveType) || 'unknown',
-        ua: navigator.userAgent.slice(0, 300)
+        url: W.location.pathname,
+        referrer: (function () {
+            try { return D.referrer ? new URL(D.referrer).hostname : ''; }
+            catch (_) { return ''; }
+        })()
     });
 
     // ── Time on page ──────────────────────────────────────────────────────────
@@ -121,16 +116,21 @@
     // ── Error tracking ────────────────────────────────────────────────────────
     if (settings.errors !== false) {
         W.addEventListener('error', function (e) {
+            var msg = String(e.message || '');
+            if (msg.toLowerCase().indexOf('transition was skipped') !== -1) return;
             push('js_error', {
-                message: String(e.message || '').slice(0, 200),
+                message: msg.slice(0, 200),
                 filename: String(e.filename || '').slice(0, 200),
                 line: e.lineno || 0,
                 col: e.colno || 0
             });
         });
         W.addEventListener('unhandledrejection', function (e) {
+            var reasonText = String(e.reason || '');
+            var lower = reasonText.toLowerCase();
+            if (lower.indexOf('transition was skipped') !== -1) return;
             push('js_error', {
-                message: String(e.reason || '').slice(0, 200),
+                message: reasonText.slice(0, 200),
                 filename: 'promise',
                 line: 0,
                 col: 0
@@ -138,19 +138,12 @@
         });
     }
 
-    // ── Click delegation for data-track elements ──────────────────────────────
-    if (settings.clicks !== false) {
-        D.addEventListener('click', function (e) {
-            var el = e.target && e.target.closest && e.target.closest('[data-track]');
-            if (el) push('click', { label: el.getAttribute('data-track') });
-        }, { passive: true });
-    }
-
     // ── Public API ────────────────────────────────────────────────────────────
     W.Telemetry = {
         track: function (event, data) {
             // Category gate
             if (settings.enabled === false) return;
+            if (event === 'click') return;
             if (event === 'js_error' && settings.errors === false) return;
             if ((event === 'web_vital' || event === 'model_fps' || event === 'model_load_start' ||
                  event === 'model_load_end') && settings.performance === false) return;

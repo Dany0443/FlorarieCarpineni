@@ -7,7 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (_) {}
     }
 
+    const MAX_FLOWERS_PER_ORDER = 25;
     const cart = JSON.parse(localStorage.getItem('flowerCart')) || [];
+    function normalizeCart(rawCart) {
+        if (!Array.isArray(rawCart)) return [];
+        const out = [];
+        let totalQty = 0;
+        for (const item of rawCart) {
+            if (!item) continue;
+            const qty = Math.max(1, Math.min(MAX_FLOWERS_PER_ORDER, Math.floor(Number(item.qty) || 1)));
+            if (totalQty + qty > MAX_FLOWERS_PER_ORDER) break;
+            out.push({ ...item, qty });
+            totalQty += qty;
+        }
+        return out;
+    }
+    const normalizedCart = normalizeCart(cart);
+    if (JSON.stringify(normalizedCart) !== JSON.stringify(cart)) {
+        localStorage.setItem('flowerCart', JSON.stringify(normalizedCart));
+    }
+    cart.length = 0;
+    cart.push(...normalizedCart);
     if (cart.length === 0) {
         window.location.replace('/');
         return;
@@ -161,10 +181,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const safeCart = cart.map(i => ({
+                id:    Number(i.id),
                 name:  sanitizeText(i.name, 120),
-                qty:   Math.max(1, Math.min(99, Number(i.qty))),
+                qty:   Math.max(1, Math.min(MAX_FLOWERS_PER_ORDER, Number(i.qty))),
                 price: Math.max(0, Number(Number(i.price).toFixed(2)))
             }));
+            const totalFlowers = safeCart.reduce((sum, i) => sum + i.qty, 0);
+            if (totalFlowers > MAX_FLOWERS_PER_ORDER) {
+                return showFeedback('error', `Maxim ${MAX_FLOWERS_PER_ORDER} flori per comandă.`);
+            }
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.textContent = safeT('btn_sending', 'Se trimite...');
@@ -293,12 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const orderData = {
                     customer: { name: safeName, phone: safePhone, email: safeEmail, address: safeAddress },
                     cart: cart.map(i => ({
+                        id:    Number(i.id),
                         name:  sanitizeText(i.name, 120),
-                        qty:   Math.max(1, Math.min(99, Number(i.qty))),
+                        qty:   Math.max(1, Math.min(MAX_FLOWERS_PER_ORDER, Number(i.qty))),
                         price: Math.max(0, Number(Number(i.price).toFixed(2)))
                     })),
                     total
                 };
+                const totalFlowers = orderData.cart.reduce((sum, i) => sum + i.qty, 0);
+                if (totalFlowers > MAX_FLOWERS_PER_ORDER) {
+                    await paymentResponse.complete('fail');
+                    paymentResponse = null;
+                    showFeedback('error', `Maxim ${MAX_FLOWERS_PER_ORDER} flori per comandă.`);
+                    return;
+                }
 
                 const serverRes = await fetchWithTimeout('/api/order', {
                     method:  'POST',

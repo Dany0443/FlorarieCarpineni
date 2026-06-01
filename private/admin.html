@@ -2,9 +2,16 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/png" href="assets/favicon.svg">
+<link rel="icon" type="image/png" href="/assets/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Admin — Luci Boutique</title>
+<meta name="theme-color" content="#aa0132">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Luci Admin">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/private/manifest.json" crossorigin="use-credentials">
+<title>Admin - Luci Boutique</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/private/admin.css">
@@ -62,7 +69,7 @@
       <button class="nav-tab"        data-page="settings">Setări</button>
     </div>
     <div class="nav-right">
-      <button class="logout-btn" id="logout-btn">Ieși</button>
+      <button class="logout-btn" id="logout-btn" type="button">Ieși</button>
     </div>
   </nav>
 
@@ -102,7 +109,7 @@
       </div>
       <div class="stats-row">
         <div class="stat"><div class="stat-lbl">Comenzi</div><div class="stat-val c-p"    id="s-orders">—</div></div>
-        <div class="stat"><div class="stat-lbl">Vânzări</div><div class="stat-val c-green" id="s-rev">—</div></div>
+        <div class="stat"><div class="stat-lbl">Total Vânzări</div><div class="stat-val c-green" id="s-rev">—</div></div>
         <div class="stat"><div class="stat-lbl">Medie</div>  <div class="stat-val"          id="s-avg">—</div></div>
         <div class="stat"><div class="stat-lbl">Produse</div><div class="stat-val"          id="s-prod">—</div></div>
       </div>
@@ -113,11 +120,42 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Client</th><th>Telefon</th><th>Total</th><th>Data</th></tr></thead>
-            <tbody id="dash-tbody"><tr><td colspan="5" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr></tbody>
+            <thead><tr><th>ID</th><th>Client</th><th>Total</th><th>Data</th></tr></thead>
+            <tbody id="dash-tbody"><tr><td colspan="4" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr></tbody>
           </table>
         </div>
         <div class="order-cards" id="dash-cards"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Telemetry</span>
+          <button class="btn-ghost" id="dash-open-telemetry">Detalii</button>
+        </div>
+      <div class="panel-body">
+          <div class="dash-telemetry-kpis">
+            <div class="dash-telemetry-kpi">
+              <div class="dash-telemetry-kpi-label">Vizite Magazin Azi</div>
+              <div class="dash-telemetry-kpi-val" id="dash-tm-storefront-today">—</div>
+            </div>
+            <div class="dash-telemetry-kpi">
+              <div class="dash-telemetry-kpi-label">Vizite Totale</div>
+              <div class="dash-telemetry-kpi-val" id="dash-tm-unique-today">—</div>
+            </div>
+            <div class="dash-telemetry-kpi">
+              <div class="dash-telemetry-kpi-label">Rată Coș</div>
+              <div class="dash-telemetry-kpi-val" id="dash-tm-add-rate">—</div>
+            </div>
+            <div class="dash-telemetry-kpi">
+              <div class="dash-telemetry-kpi-label">Conversie Checkout</div>
+              <div class="dash-telemetry-kpi-val" id="dash-tm-checkout-rate">—</div>
+            </div>
+          </div>
+          <div class="dash-telemetry-footer">
+            <span id="dash-tm-sync">Sincronizare: —</span>
+            <span id="dash-tm-storefront">Produse: —</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -134,8 +172,8 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Client</th><th>Contact</th><th>Produse</th><th>Total</th><th>Data</th></tr></thead>
-            <tbody id="orders-tbody"><tr><td colspan="6" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr></tbody>
+            <thead><tr><th>ID</th><th>Client</th><th>Contact</th><th>Produse</th><th>Total</th><th>Data</th><th>Acțiuni</th></tr></thead>
+            <tbody id="orders-tbody"><tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr></tbody>
           </table>
         </div>
         <div class="order-cards" id="orders-cards"></div>
@@ -178,7 +216,7 @@
               <label>Imagine</label>
               <div class="drop-zone" id="drop-zone">
                 <input type="file" id="f-img-file" accept="image/*">
-                <div class="drop-hint">Trage imaginea sau <strong>apasă să alegi</strong><br><span style="font-size:0.7rem;">PNG · JPG · AVIF · WEBP — max 5MB</span></div>
+                <div class="drop-hint">Trage imaginea sau <strong>apasă să alegi</strong><br><span style="font-size:0.7rem;">PNG · JPG · AVIF · WEBP · max 5MB</span></div>
                 <img class="drop-preview" id="drop-preview" alt="">
               </div>
             </div>
@@ -192,53 +230,41 @@
 
     <!-- telemetry -->
     <div class="page" id="page-telemetry">
-
       <div class="page-header tm2-header tm3-s" style="--i:0">
         <div>
           <div class="page-title">Telemetry</div>
-          <div class="page-sub" id="tm2-last-sync-label">—</div>
+          <div class="page-sub" id="tm2-last-sync-label">Live prin Socket.IO</div>
         </div>
-        <button class="btn-ghost tm2-refresh-btn" id="telemetry-refresh-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Reîncarcă
-        </button>
       </div>
 
-
-      <!-- KPI Strip -->
-      <div class="tm2-kpi-strip tm3-s" style="--i:1">
-        <div class="tm2-kpi" style="--kpi-c:var(--sub)" id="tm2k-status">
-          <div class="tm2-kpi-label">Status</div>
+      <div class="tm2-kpi-strip tm3-s tm2-kpi-strip-lite" style="--i:1">
+        <div class="tm2-kpi" style="--kpi-c:var(--sub)">
+          <div class="tm2-kpi-label">Status Colectare</div>
           <div class="tm2-kpi-val" id="tm2-status"><span class="tm2-skeleton"></span></div>
         </div>
-        <div class="tm2-kpi" style="--kpi-c:var(--p)" id="tm2k-today">
-          <div class="tm2-kpi-label">Evenimente Azi</div>
-          <div class="tm2-kpi-val" id="tm2-events-today"><span class="tm2-skeleton"></span></div>
-        </div>
-        <div class="tm2-kpi" style="--kpi-c:#3b82f6">
+        <div class="tm2-kpi" style="--kpi-c:var(--p)">
           <div class="tm2-kpi-label">Vizite Azi</div>
           <div class="tm2-kpi-val" id="tm2-visits-today"><span class="tm2-skeleton"></span></div>
         </div>
-        <div class="tm2-kpi" style="--kpi-c:#8b5cf6">
-          <div class="tm2-kpi-label">Sesiuni 24h</div>
-          <div class="tm2-kpi-val" id="tm2-sessions-24h"><span class="tm2-skeleton"></span></div>
+        <div class="tm2-kpi" style="--kpi-c:#3b82f6">
+          <div class="tm2-kpi-label">Vizite Totale</div>
+          <div class="tm2-kpi-val" id="tm2-visits-total"><span class="tm2-skeleton"></span></div>
         </div>
-        <div class="tm2-kpi" style="--kpi-c:#22c55e">
-          <div class="tm2-kpi-label">Conversie</div>
-          <div class="tm2-kpi-val" id="tm2-checkout-rate"><span class="tm2-skeleton"></span></div>
+        <div class="tm2-kpi" style="--kpi-c:#0ea5a3">
+          <div class="tm2-kpi-label">Sesiuni Active (24h)</div>
+          <div class="tm2-kpi-val" id="tm2-sessions-live"><span class="tm2-skeleton"></span></div>
         </div>
-        <div class="tm2-kpi" style="--kpi-c:var(--red)">
-          <div class="tm2-kpi-label">Erori JS</div>
-          <div class="tm2-kpi-val" id="tm2-js-errors"><span class="tm2-skeleton"></span></div>
+        <div class="tm2-kpi" style="--kpi-c:#f59e0b">
+          <div class="tm2-kpi-label">Evenimente Azi</div>
+          <div class="tm2-kpi-val" id="tm2-events-today"><span class="tm2-skeleton"></span></div>
         </div>
       </div>
 
-      <!-- Chart -->
       <div class="panel tm2-chart-panel tm3-s" style="--i:2">
         <div class="panel-head">
           <span class="panel-title">Vizite — ultimele 30 zile</span>
           <span class="tm2-chart-legend">
-            <span class="tm2-leg-dot" style="background:var(--p)"></span> page_view unic / zi
+            <span class="tm2-leg-dot" style="background:var(--p)"></span> trafic zilnic
           </span>
         </div>
         <div class="tm2-chart-wrap">
@@ -247,92 +273,20 @@
         </div>
       </div>
 
-      <!-- Row 1: 3 col -->
-      <div class="tm3-grid-3 tm3-s" style="--i:3">
-        <div class="panel">
-          <div class="panel-head"><span class="panel-title">Conversie</span></div>
-          <div class="panel-body" id="tm2-funnel-body"><div class="tm2-skeleton-block"></div></div>
-        </div>
+      <div class="tm3-grid-2 tm3-s" style="--i:3">
         <div class="panel">
           <div class="panel-head"><span class="panel-title">Audiență</span></div>
           <div class="panel-body" id="tm2-audience-body"><div class="tm2-skeleton-block"></div></div>
         </div>
         <div class="panel">
-          <div class="panel-head"><span class="panel-title">Web Vitals</span></div>
-          <div class="panel-body" id="tm2-vitals-body"><div class="tm2-skeleton-block"></div></div>
+          <div class="panel-head"><span class="panel-title">Performanță Site</span></div>
+          <div class="panel-body" id="tm2-webperf-body"><div class="tm2-skeleton-block"></div></div>
         </div>
       </div>
 
-      <!-- Row 2: Produse Top full width -->
       <div class="panel tm3-s" style="--i:4">
         <div class="panel-head"><span class="panel-title">Produse Top</span></div>
         <div class="panel-body" id="tm2-products-body"><div class="tm2-skeleton-block"></div></div>
-      </div>
-
-      <!-- hidden pages body (still populated by JS) -->
-      <div id="tm2-pages-body" style="display:none"></div>
-      <!-- hidden errors body (still populated by JS, read by dropdown) -->
-      <div id="tm2-errors-body" style="display:none"></div>
-      <span id="tm2-err-badge" style="display:none"></span>
-
-      <!-- Extra Data — outer collapsible + inner type dropdown -->
-      <details class="panel tm3-details tm3-s" style="--i:5">
-        <summary class="panel-head tm3-summary">
-          <span class="panel-title">Date Suplimentare</span>
-          <div class="tm3-summary-right">
-            <!-- Inner type picker dropdown -->
-            <div class="tm3-dd" id="tm2-extra-dd">
-              <button class="tm3-dd-btn" id="tm2-extra-dd-btn" type="button">
-                <span id="tm2-extra-dd-label">Evenimente</span>
-                <svg class="tm3-dd-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              <div class="tm3-dd-menu" id="tm2-extra-dd-menu">
-                <button class="tm3-dd-item tm3-dd-active" data-val="events">Distribuție Evenimente</button>
-                <button class="tm3-dd-item" data-val="refs">Referreri</button>
-                <button class="tm3-dd-item" data-val="errors">Erori JS</button>
-                <button class="tm3-dd-item" data-val="logs">Log-uri Server</button>
-              </div>
-            </div>
-            <!-- Outer chevron -->
-            <svg class="tm3-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-          <!-- hidden select kept for JS compatibility -->
-          <select id="tm2-extra-select" style="display:none">
-            <option value="events">Evenimente</option>
-            <option value="refs">Referreri</option>
-            <option value="errors">Erori JS</option>
-            <option value="logs">Log-uri Server</option>
-          </select>
-        </summary>
-        <div class="panel-body" id="tm2-extra-body"><div class="tm2-skeleton-block"></div></div>
-      </details>
-
-      <!-- 3D Perf accordion -->
-      <details class="panel tm3-details tm3-s" style="--i:7">
-        <summary class="panel-head tm3-summary">
-          <span class="panel-title">Performanță 3D</span>
-          <svg class="tm3-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </summary>
-        <div class="panel-body" id="tm2-perf-body"><div class="tm2-skeleton-block"></div></div>
-      </details>
-
-      <!-- Control -->
-      <div class="panel tm3-s" style="--i:8; margin-bottom:32px">
-        <div class="panel-head"><span class="panel-title">Control Telemetry</span></div>
-        <div class="panel-body">
-          <div class="sec-row" style="padding-bottom:0;">
-            <div class="sec-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 3v18h18"></path><path d="M7 14l3-3 3 2 4-5"></path>
-              </svg>
-            </div>
-            <div class="sec-info">
-              <div class="sec-title">Event Tracking</div>
-              <div class="sec-sub">Loghează performanța, acțiunile admin și erorile pentru analiză.</div>
-            </div>
-            <button class="btn btn-p sec-btn" id="telemetry-enable-btn">Activ</button>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -346,13 +300,66 @@
       
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-title">Aspect și Personalizare</span>
+          <span class="panel-title">Securitate</span>
         </div>
-        <div class="panel-body" style="padding: 20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 15px;">
-            <div>
-              <div style="font-weight: 600; margin-bottom: 4px;">Temă</div>
-              <div style="font-size: 0.85rem; color: var(--sub);">Mod întunecat sau luminos</div>
+        <div class="panel-body settings-panel-body">
+          <div class="settings-row">
+            <div class="sec-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+                <path d="M8 12l2.5 2.5L16 9"></path>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-title">Passkey</div>
+              <div class="sec-sub">Autentificare rapidă pentru dispozitive de încredere.</div>
+            </div>
+            <button class="btn btn-p sec-btn" id="add-passkey-btn">Adaugă</button>
+          </div>
+
+          <div id="passkeys-list" class="settings-passkeys-list" style="display:none;">
+            <div class="settings-passkeys-title">Dispozitive conectate</div>
+            <div id="passkeys-container"></div>
+          </div>
+
+          <div class="settings-inline-actions">
+            <button class="btn btn-ghost settings-logout-inline" id="mobile-logout-btn">Deconectare</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Telemetry</span>
+        </div>
+        <div class="panel-body settings-panel-body">
+          <div class="settings-row settings-row-no-border">
+            <div class="sec-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"></path>
+                <path d="M8 14l3-3 3 2 4-5"></path>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-title">Colectare date</div>
+              <div class="sec-sub" id="settings-telemetry-status">Se încarcă setările...</div>
+            </div>
+            <button class="settings-switch" id="settings-telemetry-enable-btn" type="button" role="switch" aria-checked="false" aria-label="Colectare telemetry" disabled>
+              <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+              <span class="settings-switch-text" id="settings-telemetry-enable-label">...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Aspect și Sunet</span>
+        </div>
+        <div class="panel-body settings-panel-body">
+          <div class="settings-row">
+            <div class="sec-info">
+              <div class="sec-title">Temă</div>
             </div>
             <div class="toggle-wrapper" id="theme-toggle" data-active="false">
               <span class="toggle-label">
@@ -372,16 +379,17 @@
               </span>
             </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 15px; margin-bottom: 4px;">
-            <div>
-              <div style="font-weight: 600; margin-bottom: 4px;">Culoare de accent</div>
-              <div style="font-size: 0.85rem; color: var(--sub);">Alege nuanța principală a panoului admin</div>
+
+          <div class="settings-row">
+            <div class="sec-info">
+              <div class="sec-title">Culoare accent</div>
             </div>
-            <button class="btn btn-tog" id="accent-color-btn" style="width: auto; padding: 8px 16px; gap: 8px;">
+            <button class="btn btn-tog settings-action-btn" id="accent-color-btn">
               <span class="accent-preview" id="accent-preview-current" style="width:14px;height:14px;border-radius:50%;background:var(--p);display:inline-block;"></span>
               Schimbă
             </button>
           </div>
+
           <div class="accent-picker" id="accent-picker">
             <div class="accent-picker-scroll">
               <div class="accent-picker-grid">
@@ -428,51 +436,31 @@
               <button class="btn btn-p btn-sm" id="accent-apply-btn">Aplică</button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <span class="panel-title">Securitate & Autentificare</span>
-        </div>
-        <div class="panel-body" style="padding: 20px;">
-
-          <div class="sec-row">
-            <div class="sec-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                <path d="M8 12l2.5 2.5L16 9"/>
-              </svg>
-            </div>
+          <div class="settings-row settings-row-no-border">
             <div class="sec-info">
-              <div class="sec-title">Autentificare Biometrică</div>
-              
+              <div class="sec-title">Sunet notificări</div>
             </div>
-            <button class="btn btn-p sec-btn" id="add-passkey-btn">+ Adaugă Passkey</button>
-          </div>
-
-          <div id="passkeys-list" style="display:none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-            <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.85rem; color: var(--sub);">Dispozitive conectate</div>
-            <div id="passkeys-container"></div>
-          </div>
-
-          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
-            <button class="btn btn-ghost" id="mobile-logout-btn" style="width: 100%;">Deconectare</button>
+            <div class="settings-volume-control">
+              <input id="sound-vol-slider" type="range" min="0" max="100" step="1" value="5" aria-label="Volum notificări admin">
+              <span id="vol-label">5%</span>
+              <button class="btn btn-ghost settings-sound-test" id="vol-test-btn" type="button">Test</button>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-title">Rapoarte & Export</span>
+          <span class="panel-title">Export CSV</span>
         </div>
-        <div class="panel-body" style="padding: 20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 15px;">
-            <div>
-              <div style="font-weight: 600; margin-bottom: 4px;">Export CSV Comenzi</div>
-              <div style="font-size: 0.85rem; color: var(--sub);">Descarcă toate comenzile în format Excel (CSV) pentru contabilitate.</div>
+        <div class="panel-body settings-panel-body">
+          <div class="settings-row settings-row-no-border">
+            <div class="sec-info">
+              <div class="sec-title">Comenzi</div>
+              <div class="sec-sub">Descarcă toate comenzile într-un fișier CSV.</div>
             </div>
-            <button class="btn btn-p" id="export-csv-btn" style="width: auto; padding: 8px 16px;">Descarcă CSV</button>
+            <button class="btn btn-p settings-action-btn" id="export-csv-btn">Descarcă CSV</button>
           </div>
         </div>
       </div>
@@ -527,7 +515,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/socket.io/socket.io.js"></script>
+<script src="/js/telemetry.js"></script>
 <script src="/private/admin.js"></script>
 </body>
 </html>

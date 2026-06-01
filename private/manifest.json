@@ -1,0 +1,26 @@
+{
+  "id": "/private/admin.html",
+  "name": "Luci Admin Panel",
+  "short_name": "Luci Admin",
+  "description": "Panoul administrativ pentru Luci Boutique.",
+  "start_url": "/private/admin.html",
+  "scope": "/private/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f4f1",
+  "theme_color": "#aa0132",
+  "icons": [
+    {
+      "src": "/assets/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

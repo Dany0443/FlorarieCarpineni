@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /contact
+Disallow: /admops
+Disallow: /admin
+Disallow: /login
+Disallow: /api/
+Disallow: /private/
+Disallow: /checkout
+
+Sitemap: https://florariecarpineni.com/sitemap.xml

@@ -1,6 +1,11 @@
 let allProducts = [];
-let wsConnected = false;
 let conditionalAbortController = null;
+let telemetryReloadTimer = null;
+let telemetryLoading = false;
+let telemetryOverviewCache = null;
+let dashboardLoading = false;
+let dashboardReloadQueued = false;
+const ADMIN_SOCKET_PATH = '/api/socket.io';
 
 const toBase64Url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 const b64urlToBuffer = b64url => { if (!b64url) return null; const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/'); const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='); return Uint8Array.from(atob(padded), c => c.charCodeAt(0)); };
@@ -22,26 +27,41 @@ function playSound(filename) {
 // Keep legacy alias in case anything else calls it
 const notificationSound = () => playSound('NewOrderSound.mp3');
 
-const socket = typeof io !== 'undefined' ? io() : null;
+let socket = null;
 
-if (socket) {
+function bindSocketHandlers() {
+    if (!socket) return;
+
     socket.on('connect', () => {
-        wsConnected = true;
         console.log('[WS] Connected:', socket.id);
+        scheduleTelemetryReload(250);
     });
     socket.on('disconnect', () => {
-        wsConnected = false;
         console.log('[WS] Disconnected');
     });
     socket.on('connect_error', e => {
-        console.error('[WS] Connection error:', e.message);
+        console.warn('[WS] Connection error:', e.message);
     });
 
     socket.on('new_order', order => {
         notificationSound();
         toast(`Comanda noua: ${order.id} — ${order.customer?.name || 'Client'} — ${order.total} MDL`, 'success');
         if (typeof loadOrders === 'function') loadOrders();
-        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadDashboard === 'function' && isDashboardPageOpen()) loadDashboard({ showLoading: false });
+    });
+    socket.on('order_deleted', () => {
+        if (typeof loadOrders === 'function') loadOrders();
+        if (typeof loadDashboard === 'function' && isDashboardPageOpen()) loadDashboard({ showLoading: false });
+    });
+    socket.on('telemetry_ingest', payload => {
+        scheduleTelemetryReload(220);
+    });
+    socket.on('telemetry_settings_update', payload => {
+        if (payload && payload.settings && typeof payload.settings === 'object') {
+            telemetrySettingsState = payload.settings;
+            renderTelemetryToggle();
+        }
+        scheduleTelemetryReload(250);
     });
 
     // Server pushes updated device list whenever a new login happens on any device
@@ -74,12 +94,67 @@ if (socket) {
         .then(r => r.json())
         .then(d => {
             if (d.success && Array.isArray(d.passkeys)) {
-                _knownDeviceTokens = new Set(d.passkeys.map(p => p.credentialID));
+                _knownDeviceTokens = new Set(d.passkeys.map(p => p.deviceToken || p.credentialID));
             }
         })
         .catch(() => {});
-} else {
-    console.warn('[WS] Socket.io not loaded — skipping WebSocket connection');
+
+    socket.on('connect', registerDeviceSocket);
+
+    // Server fires this when the current device is revoked by another session.
+    socket.on('force_logout', () => {
+        toast('Dispozitiv revocat. Se deconectează...', 'error');
+        setTimeout(() => {
+            fetch('/api/admops/logout', { method: 'POST', credentials: 'include' })
+                .finally(() => { window.location.href = '/login'; });
+        }, 1500);
+    });
+}
+
+async function maybeInitSocket() {
+    try {
+        const response = await fetch(`${ADMIN_SOCKET_PATH}/socket.io.js`, {
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        if (!response.ok) {
+            console.info('[WS] Socket endpoint unavailable.');
+            return;
+        }
+
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        if (!contentType.includes('javascript')) {
+            console.info('[WS] Socket client script skipped (unexpected content type).');
+            return;
+        }
+
+        const scriptText = await response.text();
+        const blobUrl = URL.createObjectURL(new Blob([scriptText], { type: 'text/javascript' }));
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = blobUrl;
+            script.async = true;
+            script.onload = () => {
+                URL.revokeObjectURL(blobUrl);
+                resolve();
+            };
+            script.onerror = () => {
+                URL.revokeObjectURL(blobUrl);
+                reject(new Error('Socket loader failed'));
+            };
+            document.head.appendChild(script);
+        });
+
+        if (typeof window.io !== 'function') {
+            console.info('[WS] Socket client missing io() global.');
+            return;
+        }
+
+        socket = window.io({ path: ADMIN_SOCKET_PATH, withCredentials: true });
+        bindSocketHandlers();
+    } catch (err) {
+        console.info('[WS] Realtime disabled for this session.');
+    }
 }
 
 // ── Register this device with the server so it can be instantly kicked ────────
@@ -95,76 +170,40 @@ async function registerDeviceSocket() {
     } catch (e) { /* not logged in yet — harmless */ }
 }
 
-if (socket) {
-    socket.on('connect', registerDeviceSocket);
-
-    // Server fires this when the current device is revoked by another session.
-    socket.on('force_logout', () => {
-        toast('Dispozitiv revocat. Se deconectează...', 'error');
-        setTimeout(() => {
-            fetch('/api/admops/logout', { method: 'POST', credentials: 'include' })
-                .finally(() => { window.location.href = '/login'; });
-        }, 1500);
-    });
-}
-
 // ── Volume control — injected into the settings page ─────────────────────────
 function renderVolumeControl() {
-    if (document.getElementById('sound-vol-section')) return; // already rendered
-    const page = document.getElementById('page-settings');
-    if (!page) return;
+    const slider = document.getElementById('sound-vol-slider');
+    const label = document.getElementById('vol-label');
+    const testBtn = document.getElementById('vol-test-btn');
+    if (!slider || !label || !testBtn) return;
+    const setSliderVisualFill = (pctValue) => {
+        const safe = Math.max(0, Math.min(100, Number(pctValue) || 0));
+        slider.style.setProperty('--slider-fill-pct', `${safe}%`);
+    };
 
-    const saved = getSoundVolume();
-    const pct   = Math.round(saved * 100);
+    const savedRaw = parseFloat(localStorage.getItem('admin_sound_vol'));
+    const normalized = Number.isFinite(savedRaw) ? Math.max(0, Math.min(1, savedRaw)) : 0.05;
+    if (!Number.isFinite(savedRaw)) {
+        localStorage.setItem('admin_sound_vol', normalized.toFixed(2));
+    }
 
-    const section = document.createElement('div');
-    section.id = 'sound-vol-section';
-    section.className = 'settings-collapse';
-    section.innerHTML = `
-        <button id="vol-toggle-btn" class="settings-collapse-toggle">
-            <span>⚙ Volum notificări</span>
-            <span id="vol-toggle-arrow" class="settings-collapse-arrow">▼</span>
-        </button>
-        <div class="settings-collapse-body" id="vol-body-wrap">
-          <div class="settings-collapse-body-inner">
-            <div style="display:flex;align-items:center;gap:10px;margin:12px 0 10px;">
-                <span style="font-size:0.95rem;opacity:0.5;">🔈</span>
-                <input id="sound-vol-slider" type="range" min="0" max="100" value="${pct}"
-                    style="flex:1;accent-color:var(--p);cursor:pointer;">
-                <span style="font-size:0.95rem;opacity:0.9;">🔊</span>
-                <span id="vol-label" style="font-size:0.82rem;color:var(--p);font-weight:600;min-width:32px;text-align:right;">${pct}%</span>
-            </div>
-            <div style="display:flex;justify-content:flex-end;">
-                <button id="vol-test-btn" style="background:none;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:3px 12px;font-size:0.78rem;cursor:pointer;">▶ Test</button>
-            </div>
-          </div>
-        </div>`;
+    const pct = Math.round(normalized * 100);
+    slider.value = String(pct);
+    label.textContent = `${pct}%`;
+    setSliderVisualFill(pct);
 
-    // Append at the very bottom of the settings page
-    page.appendChild(section);
+    if (slider.dataset.bound === '1') return;
+    slider.dataset.bound = '1';
 
-    document.getElementById('vol-toggle-btn').addEventListener('click', () => {
-        const wrap = document.getElementById('sound-vol-section');
-        if (!wrap) return;
-        const isOpen = wrap.classList.toggle('open');
-        if (!isOpen) {
-            // allow transition to finish before fully collapsing padding
-            setTimeout(() => {
-                if (!wrap.classList.contains('open')) {
-                    const inner = wrap.querySelector('.settings-collapse-body-inner');
-                    if (inner) inner.scrollTop = 0;
-                }
-            }, 280);
-        }
-    });
-
-    document.getElementById('sound-vol-slider').addEventListener('input', e => {
-        const val = parseInt(e.target.value) / 100;
+    slider.addEventListener('input', e => {
+        const currentPct = parseInt(e.target.value, 10);
+        const val = currentPct / 100;
         localStorage.setItem('admin_sound_vol', val.toFixed(2));
-        document.getElementById('vol-label').textContent = e.target.value + '%';
+        label.textContent = `${currentPct}%`;
+        setSliderVisualFill(currentPct);
     });
 
-    document.getElementById('vol-test-btn').addEventListener('click', () => {
+    testBtn.addEventListener('click', () => {
         playSound('NewOrderSound.mp3');
     });
 }
@@ -180,6 +219,7 @@ async function initAdmin() {
         if (r.status === 401) { redirectToLogin(); }
         else {
             showAdmin();
+            maybeInitSocket();
             initAdminPushNotifications();
         }
     } catch { redirectToLogin(); }
@@ -193,7 +233,7 @@ async function initAdminPushNotifications() {
     if (Notification.permission === 'denied') return;
 
     try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
+        const reg = await navigator.serviceWorker.register('/private/sw-admin.js', { scope: '/private/' });
         if (Notification.permission === 'default') {
             const perm = await Notification.requestPermission();
             if (perm !== 'granted') return;
@@ -229,6 +269,13 @@ if (document.readyState === 'loading') {
 
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function toAbsoluteAssetUrl(rawUrl) {
+    const v = String(rawUrl || '').trim();
+    if (!v) return '';
+    if (/^(https?:)?\/\//i.test(v) || v.startsWith('data:') || v.startsWith('blob:') || v.startsWith('/')) return v;
+    return `/${v.replace(/^\.?\//, '')}`;
 }
 
 function toast(msg, type='') {
@@ -601,11 +648,11 @@ function navigate(page, pushState = true) {
     document.querySelectorAll('.nav-tab,.btab').forEach(t => t.classList.toggle('active', t.dataset.page===page));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id===`page-${page}`));
     if (pushState) history.pushState({ page }, '', `?page=${page}`);
-    if (page==='dashboard') loadDashboard();
+    if (page==='dashboard') loadDashboard({ showLoading: true });
     if (page==='orders')    loadOrders();
     if (page==='products')  loadProducts();
     if (page==='telemetry') loadTelemetry();
-    if (page==='settings')  { renderVolumeControl(); loadPasskeysList(); checkCurrentDevicePasskey(); }
+    if (page==='settings')  { renderVolumeControl(); loadPasskeysList(); checkCurrentDevicePasskey(); loadTelemetry(); }
 }
 document.querySelectorAll('.nav-tab,.btab').forEach(t => t.addEventListener('click', ()=>navigate(t.dataset.page)));
 
@@ -621,6 +668,29 @@ function fmtDate(iso) {
 
 let telemetrySettingsState = null;
 let _tm2Chart = null;
+let telemetryHydrated = false;
+
+function isTelemetryPageOpen() {
+    const telemetryPage = document.getElementById('page-telemetry');
+    return Boolean(telemetryPage && telemetryPage.classList.contains('active'));
+}
+
+function isDashboardPageOpen() {
+    const dashboardPage = document.getElementById('page-dashboard');
+    return Boolean(dashboardPage && dashboardPage.classList.contains('active'));
+}
+
+function scheduleTelemetryReload(delay = 0) {
+    clearTimeout(telemetryReloadTimer);
+    telemetryReloadTimer = setTimeout(() => {
+        if (!isTelemetryPageOpen() && !isDashboardPageOpen()) return;
+        if (telemetryLoading) {
+            scheduleTelemetryReload(150);
+            return;
+        }
+        loadTelemetry();
+    }, Math.max(0, delay));
+}
 
 function tmDecode(str) {
     if (!str) return '';
@@ -644,12 +714,28 @@ function fmtTelemetryMs(v) {
 }
 
 function renderTelemetryToggle() {
-    const btn = document.getElementById('telemetry-enable-btn');
-    if (!btn) return;
-    const enabled = !(telemetrySettingsState && telemetrySettingsState.enabled === false);
-    btn.textContent = enabled ? 'Activ' : 'Oprit';
-    btn.style.background = enabled ? '' : 'var(--border)';
-    btn.style.color       = enabled ? '' : 'var(--text)';
+    const btn = document.getElementById('settings-telemetry-enable-btn');
+    const btnText = document.getElementById('settings-telemetry-enable-label');
+    const status = document.getElementById('settings-telemetry-status');
+    if (!btn || !btnText || !status) return;
+
+    if (telemetrySettingsState == null) {
+        btn.disabled = true;
+        btn.classList.remove('is-on');
+        btn.setAttribute('aria-checked', 'false');
+        btnText.textContent = '...';
+        status.textContent = 'Se încarcă setările...';
+        return;
+    }
+
+    const enabled = telemetrySettingsState.enabled !== false;
+    btn.disabled = false;
+    btn.classList.toggle('is-on', enabled);
+    btn.setAttribute('aria-checked', enabled ? 'true' : 'false');
+    btnText.textContent = enabled ? 'Activ' : 'Oprit';
+    status.textContent = enabled
+        ? 'Colectarea este activă.'
+        : 'Colectarea este oprită. Evenimentele noi nu vor mai fi stocate.';
 }
 
 function tmBarList(items, { max: explicitMax, suffix = '', colorClass = '' } = {}) {
@@ -674,6 +760,21 @@ function tmBarList(items, { max: explicitMax, suffix = '', colorClass = '' } = {
 
 function tmStatRow(k, v) {
     return `<div class="tm2-stat-row"><span class="tm2-stat-k">${esc(k)}</span><span class="tm2-stat-v">${esc(String(v))}</span></div>`;
+}
+
+function tmSetHtml(id, html) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+function telemetryTotalVisits(data) {
+    const overview = data?.overview || {};
+    if (Number.isFinite(Number(overview.totalVisits))) return Number(overview.totalVisits);
+    const insights = data?.insights || {};
+    if (Number.isFinite(Number(insights.pageViews))) return Number(insights.pageViews);
+    const daily = Array.isArray(data?.dailySummary) ? data.dailySummary : [];
+    return daily.reduce((sum, row) => sum + (Number(row?.visits) || 0), 0);
 }
 
 function tmFunnelStep(label, count, baseCount, barClass = '') {
@@ -755,7 +856,8 @@ function renderTm2Chart(dailySummary) {
     const empty  = document.getElementById('tm2-chart-empty');
     if (!canvas) return;
 
-    if (!dailySummary || !dailySummary.length) {
+    const rows = Array.isArray(dailySummary) ? dailySummary : [];
+    if (!rows.length) {
         canvas.style.display = 'none';
         if (empty) empty.style.display = '';
         return;
@@ -763,21 +865,11 @@ function renderTm2Chart(dailySummary) {
     if (empty) empty.style.display = 'none';
     canvas.style.display = '';
 
-    const labels = dailySummary.map(d => {
+    const labels = rows.map(d => {
         const [, m, day] = d.date.split('-');
         return `${day}/${m}`;
     });
-    const data = dailySummary.map(d => d.visits || 0);
-
-    if (_tm2Chart) {
-        _tm2Chart.destroy();
-        _tm2Chart = null;
-        // Reset canvas so Chart.js doesn't read stale pixel dimensions on re-init
-        canvas.removeAttribute('width');
-        canvas.removeAttribute('height');
-        canvas.style.width  = '';
-        canvas.style.height = '';
-    }
+    const data = rows.map(d => d.visits || 0);
 
     const style  = getComputedStyle(document.documentElement);
     const accent = style.getPropertyValue('--p').trim() || '#aa0132';
@@ -794,6 +886,24 @@ function renderTm2Chart(dailySummary) {
     const gradient = ctx.createLinearGradient(0, 0, 0, 220);
     gradient.addColorStop(0, accent + '44');
     gradient.addColorStop(1, accent + '00');
+
+    if (_tm2Chart) {
+        const ds = _tm2Chart.data.datasets[0];
+        _tm2Chart.data.labels = labels;
+        ds.data = data;
+        ds.borderColor = accent;
+        ds.backgroundColor = gradient;
+        ds.pointBackgroundColor = accent;
+        ds.pointHoverBackgroundColor = accent;
+        ds.pointRadius = data.map(v => v > 0 ? 3 : 0);
+
+        if (_tm2Chart.options?.scales?.x?.ticks) _tm2Chart.options.scales.x.ticks.color = sub;
+        if (_tm2Chart.options?.scales?.y?.ticks) _tm2Chart.options.scales.y.ticks.color = sub;
+        if (_tm2Chart.options?.scales?.y?.grid) _tm2Chart.options.scales.y.grid.color = border;
+
+        _tm2Chart.update('none');
+        return;
+    }
 
     _tm2Chart = new Chart(canvas, {
         type: 'line',
@@ -816,8 +926,8 @@ function renderTm2Chart(dailySummary) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            aspectRatio: 4,   // width:height = 4:1 — never grows taller on refresh
-            animation: { duration: 900, easing: 'easeInOutQuart' },
+            aspectRatio: 4,
+            animation: { duration: 380, easing: 'easeOutQuad' },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -825,7 +935,7 @@ function renderTm2Chart(dailySummary) {
                     padding: 10,
                     cornerRadius: 8,
                     callbacks: {
-                        title: ctx => dailySummary[ctx[0].dataIndex]?.date ?? '',
+                        title: ctx => ctx[0]?.label ?? '',
                         label: ctx => ` ${ctx.raw} vizite`
                     }
                 }
@@ -852,302 +962,138 @@ function renderTm2Chart(dailySummary) {
     });
 }
 
+function telemetryPerfSummary(webVitals, insights) {
+    const lcp = Number(webVitals?.lcp);
+    const fcp = Number(webVitals?.fcp);
+    const cls = Number(webVitals?.cls);
+    const samples = webVitals?.samples || {};
+    const probes = (Number(samples.lcp) || 0) + (Number(samples.fcp) || 0) + (Number(samples.cls) || 0);
+
+    let score = 0;
+    let checks = 0;
+
+    if (Number.isFinite(lcp)) {
+        checks++;
+        score += lcp < 2500 ? 2 : (lcp < 4000 ? 1 : 0);
+    }
+    if (Number.isFinite(fcp)) {
+        checks++;
+        score += fcp < 1800 ? 2 : (fcp < 3000 ? 1 : 0);
+    }
+    if (Number.isFinite(cls)) {
+        checks++;
+        score += cls < 0.1 ? 2 : (cls < 0.25 ? 1 : 0);
+    }
+
+    let level = 'Date insuficiente';
+    let levelClass = 'is-mid';
+    let tip = 'Continuă colectarea datelor pentru un verdict stabil.';
+    if (checks > 0) {
+        const ratio = score / (checks * 2);
+        if (ratio >= 0.75) {
+            level = 'Experiență rapidă';
+            levelClass = 'is-good';
+            tip = 'Site-ul răspunde bine pe majoritatea dispozitivelor.';
+        } else if (ratio >= 0.45) {
+            level = 'Experiență bună';
+            levelClass = 'is-mid';
+            tip = 'Performanța este bună, dar există loc de optimizare.';
+        } else {
+            level = 'Necesită optimizare';
+            levelClass = 'is-bad';
+            tip = 'Merită optimizate imaginile și scripturile de încărcare.';
+        }
+    }
+
+    const speedText = Number.isFinite(lcp) ? fmtTelemetryMs(lcp) : '—';
+    const pageTime = fmtTelemetryMs(insights?.avgTimeOnPageMs);
+
+    return `
+      <div class="tm2-health-card ${levelClass}">
+        <div class="tm2-health-top">
+          <span class="tm2-health-badge">${esc(level)}</span>
+          <span class="tm2-health-meta">${fmtTelemetryNumber(probes)} probe</span>
+        </div>
+        <p class="tm2-health-note">${esc(tip)}</p>
+      </div>
+      ${tmStatRow('Încărcare percepută', speedText)}
+      ${tmStatRow('Timp mediu pe pagină', pageTime)}
+      ${tmStatRow('Vizualizări produse', fmtTelemetryNumber(insights?.productViews))}
+    `;
+}
+
 function renderTelemetryInsights(d) {
-    const insights    = d.insights       || {};
-    const funnel      = d.checkoutFunnel || {};
-    const webVitals   = d.webVitals      || {};
-    const device      = d.deviceBreakdown || {};
-    const perf        = d.modelPerformance || {};
-    const errors      = d.errorLog        || [];
-    const topProducts = d.topProducts     || [];
-    const countryBD   = d.countryBreakdown || {};
+    const insights = d.insights || {};
+    const webVitals = d.webVitals || {};
+    const device = d.deviceBreakdown || {};
+    const topProducts = d.topProducts || [];
+    const countryBD = d.countryBreakdown || {};
 
-    const funnelEl = document.getElementById('tm2-funnel-body');
-    if (funnelEl) {
-        const views    = Number(insights.productViews) || 0;
-        const adds     = Number(insights.cartAdds)     || 0;
-        const attempts = Number(funnel.attempts)       || 0;
-        const successes= Number(funnel.successes)      || 0;
-        const fails    = Number(funnel.fails)           || 0;
-        const base     = views || adds || attempts || 1;
+    const countryItems = Object.entries(countryBD)
+        .map(([k, v]) => ({ name: k === 'unknown' ? 'Necunoscut' : k, value: v }))
+        .slice(0, 5);
+    const osItems = Object.entries(device.os || {}).map(([k, v]) => ({ name: k, value: v }));
+    const desktop = Number(device.desktop) || 0;
+    const mobile = Number(device.mobile) || 0;
+    const tablet = Number(device.tablet) || 0;
 
-        funnelEl.innerHTML = `
-          <div class="tm2-funnel">
-            ${tmFunnelStep('Vizualizări produse', views,    views, '')}
-            ${tmFunnelStep('Adăugări în coș',      adds,    views, 'tm2-bar-warn')}
-            ${tmFunnelStep('Încercări checkout',   attempts, views, 'tm2-bar-warn')}
-            ${tmFunnelStep('Checkout reușite',     successes, views, 'tm2-bar-ok')}
-            ${fails > 0 ? tmFunnelStep('Checkout eșuate', fails, views, 'tm2-bar-err') : ''}
-          </div>
-          <hr class="tm2-divider">
-          ${tmStatRow('Rată coș (add/view)', fmtTelemetryPct(insights.addToCartRate))}
-          ${tmStatRow('Conversie checkout',  fmtTelemetryPct(insights.checkoutConversionRate))}
-          ${tmStatRow('Timp mediu pe pagină', fmtTelemetryMs(insights.avgTimeOnPageMs))}
-        `;
-    }
+    tmSetHtml('tm2-audience-body', `
+      ${tmDonut(desktop, mobile, tablet)}
+      <div class="tm2-sec-label">Sesiuni</div>
+      ${tmStatRow('Total sesiuni', fmtTelemetryNumber(insights.sessions))}
+      ${tmStatRow('Active (24h)', fmtTelemetryNumber(insights.activeSessions24h))}
+      ${tmStatRow('Vizite magazin', fmtTelemetryNumber(insights.storefrontViews))}
+      ${tmStatRow('Vizite admin', fmtTelemetryNumber(insights.adminViews))}
+      ${countryItems.length ? `<div class="tm2-sec-label">Țări top</div>${tmBarList(countryItems)}` : ''}
+      ${osItems.length ? `<div class="tm2-sec-label">Sisteme de operare</div>${tmBarList(osItems)}` : ''}
+    `);
 
-    const audienceEl = document.getElementById('tm2-audience-body');
-    if (audienceEl) {
-        const countryItems = Object.entries(countryBD)
-            .map(([k, v]) => ({ name: k === 'unknown' ? 'Necunoscut' : k, value: v }))
-            .slice(0, 5);
-        const osItems = Object.entries(device.os || {})
-            .map(([k, v]) => ({ name: k, value: v }));
-        const browserItems = Object.entries(device.browser || {})
-            .map(([k, v]) => ({ name: k, value: v }));
-        const desktop = Number(device.desktop) || 0;
-        const mobile  = Number(device.mobile)  || 0;
-        const tablet  = Number(device.tablet)  || 0;
+    const prodItems = topProducts.slice(0, 8).map(p => ({
+        name: p.name || p.id,
+        value: Number(p.views) || 0
+    }));
+    const prodDetail = topProducts.slice(0, 5).map(p =>
+        tmStatRow(p.name || p.id, `${fmtTelemetryNumber(p.views)} vizualizări`)
+    ).join('');
 
-        audienceEl.innerHTML = `
-          ${tmDonut(desktop, mobile, tablet)}
-          <div class="tm2-sec-label">Sesiuni</div>
-          ${tmStatRow('Total sesiuni',    fmtTelemetryNumber(insights.sessions))}
-          ${tmStatRow('Active (24h)',     fmtTelemetryNumber(insights.activeSessions24h))}
-          ${tmStatRow('Vizite magazin',   fmtTelemetryNumber(insights.storefrontViews))}
-          ${tmStatRow('Vizite admin',     fmtTelemetryNumber(insights.adminViews))}
-          ${countryItems.length ? `<div class="tm2-sec-label">Țări top</div>${tmBarList(countryItems)}` : ''}
-          ${osItems.length      ? `<div class="tm2-sec-label">OS</div>${tmBarList(osItems)}` : ''}
-          ${browserItems.length ? `<div class="tm2-sec-label">Browser</div>${tmBarList(browserItems)}` : ''}
-        `;
-    }
+    tmSetHtml(
+        'tm2-products-body',
+        prodItems.length
+            ? `${tmBarList(prodItems)}<hr class="tm2-divider"><div class="tm2-sec-label">Detaliu vizualizări</div>${prodDetail}`
+            : `<div class="tm2-empty">Niciun eveniment produs.</div>`
+    );
 
-    const vitalsEl = document.getElementById('tm2-vitals-body');
-    if (vitalsEl) {
-        const sv = webVitals.samples || {};
-        vitalsEl.innerHTML = `
-          <div class="tm2-vitals-row">
-            ${tmVitalPill('LCP', webVitals.lcp, sv.lcp)}
-            ${tmVitalPill('FCP', webVitals.fcp, sv.fcp)}
-            ${tmVitalPill('CLS', webVitals.cls, sv.cls)}
-          </div>
-          <div class="tm2-vital-samples">
-            LCP ${sv.lcp || 0} probe · FCP ${sv.fcp || 0} probe · CLS ${sv.cls || 0} probe
-          </div>
-          <hr class="tm2-divider" style="margin-top:10px;">
-          <div class="tm2-sec-label">Erori</div>
-          ${tmStatRow('Erori JS (total)', fmtTelemetryNumber(insights.jsErrors))}
-          ${tmStatRow('Rată erori / vizită', fmtTelemetryPct(insights.errorRate))}
-        `;
-    }
-
-    const pagesEl = document.getElementById('tm2-pages-body');
-    if (pagesEl) {
-        const pageItems = (insights.topPages || []).map(p => ({
-            name:  tmDecode(p.label || p.url || p.name || '?'),
-            value: p.value || p.visits || 0
-        }));
-        pagesEl.innerHTML = tmBarList(pageItems.slice(0, 10)) ||
-            `<div class="tm2-empty">Nicio pagină înregistrată.</div>`;
-    }
-
-    const productsEl = document.getElementById('tm2-products-body');
-    if (productsEl) {
-        const prodItems = topProducts.slice(0, 8).map(p => ({
-            name:  p.name || p.id,
-            value: (Number(p.views) || 0) + (Number(p.adds) || 0)
-        }));
-        const prodDetail = topProducts.slice(0, 5).map(p =>
-            tmStatRow(p.name || p.id, `${fmtTelemetryNumber(p.views)} viz · ${fmtTelemetryNumber(p.adds)} coș`)
-        ).join('');
-
-        productsEl.innerHTML = prodItems.length
-            ? `${tmBarList(prodItems)}
-               <hr class="tm2-divider">
-               <div class="tm2-sec-label">Detaliu viz vs coș</div>
-               ${prodDetail}`
-            : `<div class="tm2-empty">Niciun eveniment produs.</div>`;
-    }
-
-    const perfEl = document.getElementById('tm2-perf-body');
-    if (perfEl) {
-        const loadItems = (perf.loadByModel || []).slice(0, 6).map(p => ({
-            name:  p.name || p.productId,
-            value: Number(p.avgLoadMs) || 0
-        }));
-        const loadMax = Math.max(...loadItems.map(i => i.value), 1);
-
-        // Build fps cards: desktop + mobile
-        // Support both pre-aggregated fpsByDevice AND raw model_fps events
-        const fpsByType = {};
-        (perf.fpsByDevice || []).forEach(f => { fpsByType[f.deviceType] = f; });
-
-        // Fallback: aggregate from raw events if fpsByDevice is empty
-        if (!Object.keys(fpsByType).length && Array.isArray(d.rawEvents)) {
-            const fpsEvents = d.rawEvents.filter(e => e.event === 'model_fps');
-            ['desktop', 'mobile'].forEach(dt => {
-                const evts = fpsEvents.filter(e => (e.data?.deviceType || e.deviceType) === dt);
-                if (evts.length) {
-                    const avgFps = evts.reduce((s, e) => s + (Number(e.data?.avgFps || e.avgFps) || 0), 0) / evts.length;
-                    const samples = evts.reduce((s, e) => s + (Number(e.data?.samples || e.samples) || 0), 0);
-                    fpsByType[dt] = { deviceType: dt, avgFps: Math.round(avgFps * 10) / 10, samples };
-                }
-            });
-        }
-
-        const desktopFps = fpsByType['desktop'] || null;
-        const mobileFps  = fpsByType['mobile']  || null;
-
-        function fpsGrade(fps) {
-            if (fps === null || fps === undefined) return 'tm2-na';
-            if (fps >= 55) return 'tm2-good';
-            if (fps >= 30) return 'tm2-ok';
-            return 'tm2-bad';
-        }
-        function fpsCard(label, icon, data) {
-            const fps     = data ? Math.round(Number(data.avgFps) || 0) : null;
-            const samples = data ? (data.samples || 0) : 0;
-            const grade   = fpsGrade(fps);
-            const display = fps !== null ? `${fps} <span style="font-size:.75em;font-weight:400">fps</span>` : '—';
-            return `<div class="tm3-fps-card ${grade}">
-              <div class="tm3-fps-icon">${icon}</div>
-              <div class="tm3-fps-label">${label}</div>
-              <div class="tm3-fps-val">${display}</div>
-              <div class="tm3-fps-sub">${samples ? `${samples} probe` : 'fără date'}</div>
-            </div>`;
-        }
-
-        const desktopIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
-        const mobileIcon  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>`;
-
-        perfEl.innerHTML = `
-          <div class="tm2-sec-label">FPS mediu în vizualizator 3D</div>
-          <div class="tm3-fps-row">
-            ${fpsCard('Desktop / PC', desktopIcon, desktopFps)}
-            ${fpsCard('Telefon / Mobil', mobileIcon, mobileFps)}
-          </div>
-          <div class="tm2-sec-label" style="margin-top:14px">Timp mediu încărcare 3D</div>
-          ${loadItems.length
-            ? tmBarList(loadItems, { max: loadMax, suffix: 'ms' })
-            : `<div class="tm2-empty">Niciun eveniment model_load.</div>`}
-        `;
-    }
-
-    // Store errors for dropdown tab
-    _tm2ErrorsCache = errors;
-    // Update the dropdown item label with count if errors exist
-    const errItem = document.querySelector('.tm3-dd-item[data-val="errors"]');
-    if (errItem) {
-        errItem.textContent = errors.length ? `Erori JS (${errors.length})` : 'Erori JS';
-    }
-
-    renderTm2Extra('events', insights);
-}
-
-let _tm2ExtraLogsCache = null;
-let _tm2ErrorsCache    = [];
-let _tm2ExtraTab = 'events';
-
-function renderTm2Extra(tab, insights) {
-    _tm2ExtraTab = tab;
-    const body = document.getElementById('tm2-extra-body');
-    if (!body) return;
-
-    if (tab === 'events') {
-        const evItems = (insights.eventMix || []).map(e => ({
-            name:  e.label || e.event || '?',
-            value: e.value || 0
-        }));
-        body.innerHTML = evItems.length
-            ? tmBarList(evItems.slice(0, 12))
-            : `<div class="tm2-empty">Nicio distribuție de evenimente.</div>`;
-    } else if (tab === 'refs') {
-        const refItems = (insights.topReferrers || []).map(r => ({
-            name:  tmDecode(r.label || r.referrer || r.name || '?'),
-            value: r.value || 0
-        }));
-        body.innerHTML = refItems.length
-            ? tmBarList(refItems.slice(0, 10))
-            : `<div class="tm2-empty">Niciun referrer extern înregistrat.</div>`;
-    } else if (tab === 'errors') {
-        if (!_tm2ErrorsCache.length) {
-            body.innerHTML = `<div class="tm2-empty">Nu există erori JS recente. ✓</div>`;
-        } else {
-            body.innerHTML = '<div class="tm3-errlog">' + _tm2ErrorsCache.slice(0, 20).map((e, idx) => {
-                const msg     = tmDecode(e.message || 'Eroare necunoscută');
-                const file    = tmDecode(e.file || '');
-                const line    = e.line ? ` L${e.line}` : '';
-                const when    = e.ts ? new Date(e.ts).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-                const browser = e.browser || '?';
-                const os      = e.os || '?';
-                const country = e.country || '?';
-                const meta    = [file + line, `${browser} / ${os}`, country, when].filter(Boolean).join(' · ');
-                return `<div class="tm3-ecard" style="--i:${idx}">
-                  <div class="tm3-ecard-msg">${esc(msg)}</div>
-                  <div class="tm3-ecard-meta">${esc(meta)}</div>
-                </div>`;
-            }).join('') + '</div>';
-        }
-    } else if (tab === 'logs') {
-        if (_tm2ExtraLogsCache) {
-            renderTm2Logs(_tm2ExtraLogsCache);
-        } else {
-            body.innerHTML = '<div class="tm2-skeleton-block"></div>';
-            api('/api/admops/logs').then(d => {
-                _tm2ExtraLogsCache = d.logs || [];
-                if (_tm2ExtraTab === 'logs') renderTm2Logs(_tm2ExtraLogsCache);
-            }).catch(() => {
-                if (_tm2ExtraTab === 'logs') {
-                    body.innerHTML = `<div class="tm2-empty">Nu am putut încărca log-urile.</div>`;
-                }
-            });
-        }
-    }
-}
-
-function renderTm2Logs(logs) {
-    const body = document.getElementById('tm2-extra-body');
-    if (!body) return;
-    if (!logs || !logs.length) {
-        body.innerHTML = `<div class="tm2-empty">Log-uri goale.</div>`;
-        return;
-    }
-    const rows = logs.slice(0, 50).map(line => {
-        const parts = line.split(']');
-        const stamp = parts[0] ? parts[0].replace('[', '').trim() : '';
-        const rest  = parts.slice(1).join(']').trim();
-        const lvlMatch = rest.match(/\[(INFO|ERROR|WARN)\]/);
-        const lvl  = lvlMatch ? lvlMatch[1] : '';
-        const msg  = rest.replace(/\[(INFO|ERROR|WARN)\]\s*/, '').trim();
-        let   cls  = '';
-        if      (lvl === 'ERROR') cls = 'tm2-log-err';
-        else if (lvl === 'WARN')  cls = 'tm2-log-warn';
-        return `<tr class="${cls}">
-          <td class="tm2-log-stamp">${esc(stamp)}</td>
-          <td class="tm2-log-lvl">${lvl ? esc(lvl) : '—'}</td>
-          <td class="tm2-log-msg">${esc(msg)}</td>
-        </tr>`;
-    }).join('');
-    body.innerHTML = `
-      <table class="tm2-err-table">
-        <thead><tr><th>Timp</th><th>Nivel</th><th>Mesaj</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    tmSetHtml('tm2-webperf-body', telemetryPerfSummary(webVitals, insights));
 }
 
 async function loadTelemetry() {
-    ['tm2-status','tm2-events-today','tm2-visits-today','tm2-sessions-24h','tm2-checkout-rate','tm2-js-errors']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<span class="tm2-skeleton"></span>'; });
-    ['tm2-funnel-body','tm2-audience-body','tm2-vitals-body','tm2-pages-body',
-     'tm2-products-body','tm2-perf-body','tm2-errors-body','tm2-events-body','tm2-refs-body']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="tm2-skeleton-block"></div>'; });
+    if (telemetryLoading) return;
+    const telemetryVisible = isTelemetryPageOpen();
+    if (telemetrySettingsState == null) {
+        renderTelemetryToggle();
+    }
+    telemetryLoading = true;
 
     try {
         const d = await api('/api/admops/telemetry/overview');
         if (!d.success) throw new Error(d.error || 'Telemetry unavailable');
 
+        telemetryOverviewCache = d;
         telemetrySettingsState = d.settings || { enabled: true };
+        renderTelemetryToggle();
+        renderDashboardTelemetry(d);
+
+        if (!telemetryVisible) return;
 
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
         const enabled = telemetrySettingsState.enabled !== false;
         set('tm2-status', enabled ? 'Activ' : 'Oprit');
         document.getElementById('tm2-status')?.classList.toggle('c-green', enabled);
+        set('tm2-visits-total', fmtTelemetryNumber(telemetryTotalVisits(d)));
         set('tm2-events-today',  fmtTelemetryNumber(d.overview?.eventsToday ?? 0));
         set('tm2-visits-today',  fmtTelemetryNumber(d.overview?.todayVisits ?? 0));
-        set('tm2-sessions-24h',  fmtTelemetryNumber(d.insights?.activeSessions24h ?? 0));
-        set('tm2-checkout-rate', fmtTelemetryPct(d.insights?.checkoutConversionRate));
-        set('tm2-js-errors',     fmtTelemetryNumber(d.insights?.jsErrors ?? 0));
+        set('tm2-sessions-live', fmtTelemetryNumber(d.insights?.activeSessions24h ?? 0));
 
         const syncEl = document.getElementById('tm2-last-sync-label');
         if (syncEl) {
@@ -1158,24 +1104,27 @@ async function loadTelemetry() {
 
         renderTm2Chart(d.dailySummary || []);
         renderTelemetryInsights(d);
-        renderTm2Extra(_tm2ExtraTab, d.insights || {});
-        renderTelemetryToggle();
+        telemetryHydrated = true;
 
     } catch (err) {
         console.error('[Telemetry]', err);
-        ['tm2-status','tm2-events-today','tm2-visits-today','tm2-sessions-24h','tm2-checkout-rate','tm2-js-errors']
-            .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
-        ['tm2-funnel-body','tm2-audience-body','tm2-vitals-body','tm2-pages-body',
-         'tm2-products-body','tm2-perf-body','tm2-errors-body','tm2-events-body','tm2-refs-body']
-            .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="tm2-empty">Eroare la încărcarea datelor.</div>'; });
+        if (telemetryVisible && !telemetryHydrated) {
+            ['tm2-status', 'tm2-visits-total', 'tm2-events-today', 'tm2-visits-today', 'tm2-sessions-live']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+            ['tm2-audience-body', 'tm2-webperf-body', 'tm2-products-body']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="tm2-empty">Eroare la încărcarea datelor.</div>'; });
+        }
+    } finally {
+        telemetryLoading = false;
     }
 }
 
 async function toggleTelemetryEnabled() {
-    const btn = document.getElementById('telemetry-enable-btn');
-    if (!btn) return;
+    const buttons = [document.getElementById('settings-telemetry-enable-btn')].filter(Boolean);
+    if (!buttons.length) return;
+    if (telemetrySettingsState == null) return;
     const currentEnabled = !(telemetrySettingsState && telemetrySettingsState.enabled === false);
-    btn.disabled = true;
+    buttons.forEach(btn => { btn.disabled = true; });
     try {
         const d = await api('/api/admops/telemetry/settings', {
             method: 'PUT',
@@ -1185,30 +1134,82 @@ async function toggleTelemetryEnabled() {
             telemetrySettingsState = d.settings;
             renderTelemetryToggle();
             toast(telemetrySettingsState.enabled === false ? 'Telemetry oprit.' : 'Telemetry activat.', 'success');
-            loadTelemetry();
+            scheduleTelemetryReload(0);
         } else {
             toast(d.error || 'Nu am putut actualiza telemetry.', 'error');
         }
     } catch {
         toast('Eroare la actualizarea telemetry.', 'error');
     } finally {
-        btn.disabled = false;
+        buttons.forEach(btn => { btn.disabled = false; });
     }
 }
+
 function catBadge(cat) {
     const c = cat||'General';
     return `<span class="badge b-${esc(c)}">${esc(c)}</span>`;
 }
-function renderOrderCard(o) {
+
+function renderOrderCardFull(o) {
     const items = (o.cart||[]).map(i=>`${esc(i.name)} ×${esc(i.qty)}`).join(', ');
     return `<div class="ocard">
     <div class="ocard-top"><div class="ocard-name">${esc(o.customer?.name||'—')}</div><div class="ocard-total">${esc(o.total)} MDL</div></div>
     <div class="ocard-meta">${esc(o.customer?.phone||'')}${o.customer?.address?' · '+esc(o.customer.address):''}<br>${items}<br>${fmtDate(o.timestamp)}</div>
     <div class="ocard-id">${esc(o.id)}</div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end;">
+      <button class="btn-ghost" style="border-color:var(--red);color:var(--red);padding:6px 10px;font-size:0.78rem;" onclick="deleteOrder('${esc(o.id)}')">Șterge</button>
+    </div>
   </div>`;
 }
 
-async function loadDashboard() {
+function renderDashboardOrderCard(o) {
+    return `<div class="ocard ocard-dash">
+      <div class="ocard-top">
+        <div class="ocard-name">${esc(o.customer?.name || '—')}</div>
+        <div class="ocard-total">${esc(o.total)} MDL</div>
+      </div>
+      <div class="ocard-meta">${esc(o.customer?.phone || 'Fără telefon')}<br>${fmtDate(o.timestamp)}</div>
+      <div class="ocard-id">${esc(o.id)}</div>
+    </div>`;
+}
+
+function animateDashboardReveal() {
+    const page = document.getElementById('page-dashboard');
+    if (!page) return;
+
+    const targets = Array.from(page.querySelectorAll(
+        '#dash-tbody tr, #dash-cards .ocard, #dash-cards .empty'
+    ));
+    if (!targets.length) return;
+
+    targets.forEach((el, idx) => {
+        el.style.setProperty('--dash-reveal-delay', `${Math.min(idx * 32, 320)}ms`);
+        targets.forEach(el => el.classList.add('dash-reveal-item'));
+    });
+}
+
+function setDashboardLoadingState() {
+    const tbody = document.getElementById('dash-tbody');
+    const cards = document.getElementById('dash-cards');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr>';
+    }
+    if (cards) {
+        cards.innerHTML = '<div class="empty">Se încarcă...</div>';
+    }
+}
+
+async function loadDashboard(options = {}) {
+    const showLoading = options.showLoading !== false;
+    if (!isDashboardPageOpen()) return;
+    if (dashboardLoading) {
+        dashboardReloadQueued = true;
+        return;
+    }
+    dashboardLoading = true;
+    dashboardReloadQueued = false;
+    if (showLoading) setDashboardLoadingState();
+
     try {
         const [od,pd] = await Promise.all([api('/api/admops/orders'),api('/api/admops/products')]);
         const orders=od.orders||[], prods=pd.products||[];
@@ -1219,28 +1220,79 @@ async function loadDashboard() {
         document.getElementById('s-avg').textContent=avg+' MDL';
         document.getElementById('s-prod').textContent=prods.length;
         const recent=[...orders].reverse().slice(0,5);
-        const empty=`<tr><td colspan="5" style="text-align:center;padding:26px;color:var(--sub);">Nicio comandă încă.</td></tr>`;
+        const empty=`<tr><td colspan="4" style="text-align:center;padding:26px;color:var(--sub);">Nicio comandă încă.</td></tr>`;
         document.getElementById('dash-tbody').innerHTML = recent.length===0 ? empty : recent.map(o=>`<tr>
           <td><span class="oid">${esc(o.id)}</span></td>
-          <td>${esc(o.customer?.name||'—')}</td>
-          <td>${esc(o.customer?.phone||'—')}</td>
+          <td><strong>${esc(o.customer?.name||'—')}</strong></td>
           <td class="ototal">${esc(o.total)} MDL</td>
           <td>${fmtDate(o.timestamp)}</td>
         </tr>`).join('');
         const dc=document.getElementById('dash-cards');
-        dc.innerHTML=recent.length===0?`<div class="empty">Nicio comandă încă.</div>`:recent.map(renderOrderCard).join('');
+        dc.innerHTML=recent.length===0?`<div class="empty">Nicio comandă încă.</div>`:recent.map(renderDashboardOrderCard).join('');
+        if (showLoading) animateDashboardReveal();
+        await loadDashboardTelemetry({ animate: false });
     } catch(e){console.error(e);}
+    finally {
+        dashboardLoading = false;
+        if (dashboardReloadQueued && isDashboardPageOpen()) {
+            dashboardReloadQueued = false;
+            loadDashboard({ showLoading: false });
+        }
+    }
+}
+
+function renderDashboardTelemetry(d) {
+    const overview = d?.overview || {};
+    const insights = d?.insights || {};
+
+    const setVal = (id, value) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = value;
+    };
+
+    setVal('dash-tm-storefront-today', fmtTelemetryNumber(overview.eventsTodayStorefront ?? 0));
+    setVal('dash-tm-unique-today', fmtTelemetryNumber(telemetryTotalVisits(d)));
+    setVal('dash-tm-add-rate', fmtTelemetryPct(insights.addToCartRate));
+    setVal('dash-tm-checkout-rate', fmtTelemetryPct(insights.checkoutConversionRate));
+
+    const syncEl = document.getElementById('dash-tm-sync');
+    if (syncEl) {
+        syncEl.textContent = overview.lastSyncAt
+            ? `Sincronizare: ${new Date(overview.lastSyncAt).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+            : 'Sincronizare: —';
+    }
+    const storefrontEl = document.getElementById('dash-tm-storefront');
+    if (storefrontEl) {
+        storefrontEl.textContent = `Viz. produse: ${fmtTelemetryNumber(insights.productViews ?? 0)} · Add în coș: ${fmtTelemetryNumber(insights.cartAdds ?? 0)}`;
+    }
+}
+
+async function loadDashboardTelemetry(options = {}) {
+    if (!isDashboardPageOpen()) return;
+    const animate = options.animate !== false;
+    try {
+        const d = await api('/api/admops/telemetry/overview');
+        if (!d.success) return;
+        telemetryOverviewCache = d;
+        telemetrySettingsState = d.settings || { enabled: true };
+        renderTelemetryToggle();
+        renderDashboardTelemetry(d);
+        if (animate) animateDashboardReveal();
+    } catch (err) {
+        console.warn('[Dashboard telemetry]', err);
+    }
 }
 
 async function loadOrders() {
     const tbody=document.getElementById('orders-tbody');
     const cards=document.getElementById('orders-cards');
-    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sub);">Se încarcă...</td></tr>`;
     cards.innerHTML=`<div class="empty">Se încarcă...</div>`;
     try {
         const d=await api('/api/admops/orders');
         const orders=[...(d.orders||[])].reverse();
-        if (!orders.length) { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:26px;color:var(--sub);">Nicio comandă.</td></tr>`; cards.innerHTML=`<div class="empty">Nicio comandă.</div>`; return; }
+        if (!orders.length) { tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sub);">Nicio comandă.</td></tr>`; cards.innerHTML=`<div class="empty">Nicio comandă.</div>`; return; }
         tbody.innerHTML=orders.map(o=>{ const items=(o.cart||[]).map(i=>`${esc(i.name)} ×${esc(i.qty)}`).join(', '); return `<tr>
         <td><span class="oid">${esc(o.id)}</span></td>
         <td><strong>${esc(o.customer?.name||'—')}</strong><br><small style="color:var(--sub);">${esc(o.customer?.address||'')}</small></td>
@@ -1248,13 +1300,18 @@ async function loadOrders() {
         <td><div class="oitems">${items}</div></td>
         <td class="ototal">${esc(o.total)} MDL</td>
         <td>${fmtDate(o.timestamp)}</td>
+        <td><button class="btn-ghost" style="border-color:var(--red);color:var(--red);padding:6px 10px;font-size:0.78rem;" onclick="deleteOrder('${esc(o.id)}')">Șterge</button></td>
       </tr>`; }).join('');
-        cards.innerHTML=orders.map(renderOrderCard).join('');
-    } catch { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:26px;color:var(--red);">Eroare.</td></tr>`; }
+        cards.innerHTML=orders.map(renderOrderCardFull).join('');
+    } catch { tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--red);">Eroare.</td></tr>`; }
 }
 
 async function loadProducts() {
-    try { const d=await api('/api/admops/products'); allProducts=d.products||[]; renderProducts(); } catch(e){console.error(e);}
+    try {
+        const d = await api('/api/admops/products');
+        allProducts = (d.products || []).map(p => ({ ...p, image: toAbsoluteAssetUrl(p.image) }));
+        renderProducts();
+    } catch (e) { console.error(e); }
 }
 
 function renderProducts() {
@@ -1414,7 +1471,17 @@ document.getElementById('e-delete').addEventListener('click', async ()=>{
 document.getElementById('dash-ref').addEventListener('click',  loadDashboard);
 document.getElementById('orders-ref').addEventListener('click',loadOrders);
 document.getElementById('prod-ref').addEventListener('click',  loadProducts);
-document.getElementById('telemetry-refresh-btn').addEventListener('click', loadTelemetry);
+
+setInterval(() => {
+    if (document.hidden) return;
+    if (!isTelemetryPageOpen() && !isDashboardPageOpen()) return;
+    scheduleTelemetryReload(0);
+}, 60000);
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    scheduleTelemetryReload(120);
+});
 // ── Smooth <details> animation for ALL accordion panels ─────────────────
 (function() {
     // Use a WeakMap to track ongoing animations
@@ -1427,7 +1494,11 @@ document.getElementById('telemetry-refresh-btn').addEventListener('click', loadT
 
         summary.addEventListener('click', e => {
             // Don't animate if the click was on the inner dropdown button
-            if (e.target.closest('.tm3-dd')) { e.preventDefault(); return; }
+            if (e.target.closest('.tm3-dd')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
 
             e.preventDefault(); // We control open/close manually
 
@@ -1460,65 +1531,6 @@ document.getElementById('telemetry-refresh-btn').addEventListener('click', loadT
             }
         });
     });
-})();
-
-// ── Custom inner dropdown wiring ────────────────────────────────────────
-(function() {
-    const dd        = document.getElementById('tm2-extra-dd');
-    const btn       = document.getElementById('tm2-extra-dd-btn');
-    const menu      = document.getElementById('tm2-extra-dd-menu');
-    const label     = document.getElementById('tm2-extra-dd-label');
-    const selHidden = document.getElementById('tm2-extra-select');
-    if (!dd || !btn || !menu) return;
-
-    function closeMenu() {
-        menu.classList.remove('tm3-dd-open');
-        btn.setAttribute('aria-expanded', 'false');
-    }
-
-    // Toggle — stop propagation so outer <details> doesn't toggle
-    btn.addEventListener('click', e => {
-        e.stopPropagation();
-        e.preventDefault(); // don't trigger summary click
-        const isOpen = menu.classList.contains('tm3-dd-open');
-        menu.classList.toggle('tm3-dd-open', !isOpen);
-        btn.setAttribute('aria-expanded', String(!isOpen));
-    });
-
-    // Close on outside click
-    document.addEventListener('click', closeMenu);
-    menu.addEventListener('click', e => e.stopPropagation());
-
-    // Item selection
-    menu.querySelectorAll('.tm3-dd-item').forEach(item => {
-        item.addEventListener('click', e => {
-            e.stopPropagation();
-            const val = item.dataset.val;
-            menu.querySelectorAll('.tm3-dd-item').forEach(i => i.classList.remove('tm3-dd-active'));
-            item.classList.add('tm3-dd-active');
-            const shortLabels = { events: 'Evenimente', refs: 'Referreri', errors: 'Erori JS', logs: 'Log-uri' };
-            label.textContent = shortLabels[val] || item.textContent;
-            closeMenu();
-            if (selHidden) selHidden.value = val;
-
-            _tm2ExtraLogsCache = null;
-            if (val === 'errors') {
-                renderTm2Extra('errors', {});
-            } else {
-                api('/api/admops/telemetry/overview').then(d => {
-                    if (d.success) renderTm2Extra(val, d.insights || {});
-                }).catch(() => {});
-            }
-        });
-    });
-
-    // Legacy select change
-    if (selHidden) {
-        selHidden.addEventListener('change', function() {
-            const item = menu.querySelector(`.tm3-dd-item[data-val="${this.value}"]`);
-            if (item) item.click();
-        });
-    }
 })();
 
 // Settings - Theme toggle
@@ -1557,35 +1569,48 @@ document.getElementById('mobile-logout-btn').addEventListener('click', () => {
 });
 
 async function loadPasskeysList() {
-    const res = await fetch('/api/admops/passkeys', { credentials: 'include' });
-    const data = await res.json();
     const container = document.getElementById('passkeys-container');
     const listDiv   = document.getElementById('passkeys-list');
-    if (!data.success || !data.passkeys.length) {
-        if (listDiv) listDiv.style.display = 'none';
-        return;
-    }
-    if (listDiv) listDiv.style.display = 'block';
+    if (!container || !listDiv) return;
 
-    container.innerHTML = data.passkeys.map(p => {
-        const methodIcons = [];
-        if (p.authMethods?.includes('passkey'))  methodIcons.push('<span style="font-size:0.72rem;background:var(--p);color:#fff;padding:1px 7px;border-radius:20px;">Passkey</span>');
-        if (p.authMethods?.includes('password')) methodIcons.push('<span style="font-size:0.72rem;background:var(--border);color:var(--text);padding:1px 7px;border-radius:20px;">Parolă</span>');
-        const currentBadge = p.isCurrentDevice
-            ? '<span style="font-size:0.7rem;color:var(--p);margin-left:6px;">● Curent</span>'
-            : '';
-        const lastSeenStr = p.lastSeen
-            ? new Date(p.lastSeen).toLocaleString('ro-RO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
-            : '—';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openDeviceModal('${esc(p.credentialID)}')">
-            <div>
-                <div style="font-weight:500;">${esc(p.deviceName)}${currentBadge}</div>
-                <div style="font-size:0.78rem;color:var(--sub);margin-top:3px;">Ultima activitate: ${lastSeenStr}</div>
-                <div style="display:flex;gap:5px;margin-top:5px;">${methodIcons.join('')}</div>
-            </div>
-            <span style="color:var(--sub);font-size:1.1rem;">›</span>
-        </div>`;
-    }).join('');
+    listDiv.style.display = 'block';
+    container.innerHTML = '<div class="settings-loading-text">Se încarcă dispozitivele...</div>';
+
+    try {
+        const res = await fetch('/api/admops/passkeys', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success) {
+            container.innerHTML = '<div class="settings-loading-text is-error">Nu am putut încărca dispozitivele.</div>';
+            return;
+        }
+        if (!data.passkeys.length) {
+            container.innerHTML = '<div class="settings-loading-text">Nu există dispozitive conectate.</div>';
+            return;
+        }
+
+        container.innerHTML = data.passkeys.map((p, idx) => {
+            const methodIcons = [];
+            if (p.authMethods?.includes('passkey'))  methodIcons.push('<span style="font-size:0.72rem;background:var(--p);color:#fff;padding:1px 7px;border-radius:20px;">Passkey</span>');
+            if (p.authMethods?.includes('password')) methodIcons.push('<span style="font-size:0.72rem;background:var(--border);color:var(--text);padding:1px 7px;border-radius:20px;">Parolă</span>');
+            const currentBadge = p.isCurrentDevice
+                ? '<span style="font-size:0.7rem;color:var(--p);margin-left:6px;">● Curent</span>'
+                : '';
+            const lastSeenStr = p.lastSeen
+                ? new Date(p.lastSeen).toLocaleString('ro-RO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+                : '—';
+            return `<div class="settings-device-row" style="--row-delay:${Math.min(idx * 45, 260)}ms;display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openDeviceModal('${esc(p.deviceToken || p.credentialID)}')">
+                <div>
+                    <div style="font-weight:500;">${esc(p.deviceName)}${currentBadge}</div>
+                    <div style="font-size:0.78rem;color:var(--sub);margin-top:3px;">Ultima activitate: ${lastSeenStr}</div>
+                    <div style="display:flex;gap:5px;margin-top:5px;">${methodIcons.join('')}</div>
+                </div>
+                <span style="color:var(--sub);font-size:1.1rem;">›</span>
+            </div>`;
+        }).join('');
+    } catch {
+        container.innerHTML = '<div class="settings-loading-text is-error">Nu am putut încărca dispozitivele.</div>';
+    }
 }
 
 let currentDeviceCredId = null;
@@ -1599,7 +1624,7 @@ function openDeviceModal(deviceToken) {
 
     Promise.all([devRes, actRes]).then(([data, actData]) => {
         if (!data.success) return;
-        const p = data.passkeys.find(x => x.credentialID === deviceToken);
+        const p = data.passkeys.find(x => (x.deviceToken || x.credentialID) === deviceToken);
         if (!p) return;
 
         document.getElementById('device-modal-title').textContent = p.deviceName || 'Dispozitiv';
@@ -1612,6 +1637,7 @@ function openDeviceModal(deviceToken) {
             product_delete:  'Produs șters',
             product_toggle:  'Produs arătat/ascuns',
             order_status:    'Status comandă schimbat',
+            order_delete:    'Comandă ștearsă',
             passkey_deleted: 'Passkey șters',
             passkey_renamed: 'Dispozitiv redenumit',
         };
@@ -1839,6 +1865,27 @@ async function revokeDevice(deviceToken) {
     else toast(data.error || 'Eroare.', 'error');
 }
 
+async function deleteOrder(orderId) {
+    if (!orderId) return;
+    if (!confirm(`Ștergi comanda ${orderId}?\nAcțiunea este permanentă.`)) return;
+    try {
+        const res = await fetch(`/api/admops/orders/${encodeURIComponent(orderId)}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast('Comandă ștearsă.', 'success');
+            loadOrders();
+            loadDashboard();
+        } else {
+            toast(data.error || 'Nu am putut șterge comanda.', 'error');
+        }
+    } catch (e) {
+        toast('Eroare la ștergere comandă.', 'error');
+    }
+}
+
 // Legacy alias kept in case any other code still calls deletePasskey(credId)
 async function deletePasskey(credId) { await removeDevicePasskey(credId); }
 
@@ -1925,22 +1972,31 @@ function setSwatchSelection(color) {
 
 setSwatchSelection(getComputedStyle(document.documentElement).getPropertyValue('--p').trim());
 
+function openAccentPicker() {
+    if (!accentPicker) return;
+    accentPicker.classList.add('open');
+    isAccentPickerOpen = true;
+}
+
+function closeAccentPicker() {
+    if (!accentPicker) return;
+    accentPicker.classList.remove('open');
+    isAccentPickerOpen = false;
+}
+
 accentBtn.addEventListener('click', () => {
     if (isAccentPickerOpen) {
-        accentPicker.classList.remove('open');
-        isAccentPickerOpen = false;
+        closeAccentPicker();
         return;
     }
     const current = getComputedStyle(document.documentElement).getPropertyValue('--p').trim();
     setSwatchSelection(current);
     pendingAccent = current;
-    accentPicker.classList.add('open');
-    isAccentPickerOpen = true;
+    openAccentPicker();
 });
 
 accentCancelBtn.addEventListener('click', () => {
-    accentPicker.classList.remove('open');
-    isAccentPickerOpen = false;
+    closeAccentPicker();
     pendingAccent = null;
 });
 
@@ -1957,8 +2013,7 @@ accentApplyBtn.addEventListener('click', () => {
         if (swatch) {
             applyAccentColor(swatch.dataset.color, swatch.dataset.dark, true);
         }
-        accentPicker.classList.remove('open');
-        isAccentPickerOpen = false;
+        closeAccentPicker();
         pendingAccent = null;
     }
 });
@@ -2017,7 +2072,8 @@ function exportOrdersCSV() {
 }
 
 document.getElementById('export-csv-btn')?.addEventListener('click', exportOrdersCSV);
-document.getElementById('telemetry-enable-btn')?.addEventListener('click', toggleTelemetryEnabled);
+document.getElementById('settings-telemetry-enable-btn')?.addEventListener('click', toggleTelemetryEnabled);
+document.getElementById('dash-open-telemetry')?.addEventListener('click', () => navigate('telemetry'));
 
 document.getElementById('logout-btn')?.addEventListener('click', doLogout);
 document.getElementById('login-btn')?.addEventListener('click', doLogin);

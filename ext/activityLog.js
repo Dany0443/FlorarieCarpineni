@@ -14,6 +14,7 @@ const ACTION_LABELS = {
     passkey_deleted: 'Passkey șters',
     passkey_renamed: 'Passkey redenumit',
     order_status:    'Status comandă schimbat',
+    order_delete:    'Comandă ștearsă',
 };
 
 function ensureDataDir() {

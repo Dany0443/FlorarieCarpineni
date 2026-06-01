@@ -1,6 +1,5 @@
-const CACHE_NAME  = 'luci-v4';
-const IMG_CACHE   = 'luci-images-v2';
-const ADMIN_CACHE = 'luci-admin-v3';
+const CACHE_NAME  = 'luci-v5.7';
+const IMG_CACHE   = 'luci-images-v2.1';
 const MODEL_CACHE = 'lb-modele-3d-v1';
 
 const PRECACHE_ASSETS = [
@@ -34,7 +33,7 @@ self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys =>
             Promise.all(
-                keys.filter(k => ![CACHE_NAME, IMG_CACHE, ADMIN_CACHE, MODEL_CACHE].includes(k))
+                keys.filter(k => ![CACHE_NAME, IMG_CACHE, MODEL_CACHE].includes(k))
                     .map(k => caches.delete(k))
             )
         ).then(() => self.clients.claim())
@@ -52,6 +51,12 @@ self.addEventListener('fetch', e => {
         return;
     }
 
+    // Never cache or serve admin/login shell from storefront SW.
+    if (url.pathname.startsWith('/private/') || url.pathname.startsWith('/admops') || url.pathname.startsWith('/login')) {
+        e.respondWith(fetch(e.request, { cache: 'no-store' }));
+        return;
+    }
+
     if (url.pathname.endsWith('.html') || url.pathname.endsWith('.json') || url.pathname.match(/\.(js|css)(\?|$)/)) {
         e.respondWith(
             fetch(e.request, { cache: 'no-cache' })
@@ -64,11 +69,6 @@ self.addEventListener('fetch', e => {
                 })
                 .catch(() => caches.match(e.request))
         );
-        return;
-    }
-
-    if (url.pathname.includes('admin')) {
-        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
         return;
     }
 

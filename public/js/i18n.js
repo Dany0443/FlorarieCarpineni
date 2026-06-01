@@ -6,6 +6,7 @@ const TRANSLATIONS = {
         nav_contact:    'Contact',
         nav_back:       '← Înapoi la magazin',
         nav_back_short: '← Înapoi',
+        sheet_lang_theme: 'Limbă & Temă',
         theme_dark:     'Temă întunecată',
         theme_light:    'Temă deschisă',
 
@@ -150,6 +151,7 @@ const TRANSLATIONS = {
         nav_contact:    'Contact',
         nav_back:       '← Back to shop',
         nav_back_short: '← Back',
+        sheet_lang_theme: 'Language & Theme',
         theme_dark:     'Dark theme',
         theme_light:    'Light theme',
 
@@ -284,6 +286,7 @@ const TRANSLATIONS = {
         nav_contact:    'Контакт',
         nav_back:       '← Назад в магазин',
         nav_back_short: '← Назад',
+        sheet_lang_theme: 'Язык и тема',
         theme_dark:     'Тёмная тема',
         theme_light:    'Светлая тема',
 
@@ -438,9 +441,10 @@ function hasTranslation(key, lang = window.__lang || 'ro') {
 function setLang(lang) {
     // Check if View Transitions are supported
     if (document.startViewTransition) {
-        document.startViewTransition(() => {
+        const t = document.startViewTransition(() => {
             applyLangChange(lang);
         });
+        Promise.resolve(t.finished).catch(() => {});
     } else {
         // Fallback to old cross-fade if no view transitions
         document.body.classList.add('lang-switching');
@@ -470,7 +474,8 @@ function applyTheme(theme) {
          });
      };
     if (document.startViewTransition) {
-        document.startViewTransition(apply);
+        const t = document.startViewTransition(apply);
+        Promise.resolve(t.finished).catch(() => {});
     } else {
         apply();
     }
