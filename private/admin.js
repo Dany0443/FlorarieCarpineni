@@ -437,54 +437,148 @@ async function submitPasskeyCredential(credential, errEl) {
  * are identical to Chrome.  Falls back to classic UA sniffing for Firefox and Safari.
  */
 async function detectClientDeviceName() {
-    const ua = navigator.userAgent;
+    const ua = navigator.userAgent || '';
+    const platformRaw = navigator.platform || '';
+    const linuxDistros = [
+        ['Ubuntu', /ubuntu/i],
+        ['Linux Mint', /linux mint|mint/i],
+        ['Pop!_OS', /pop!_os|pop_os/i],
+        ['Fedora', /fedora/i],
+        ['Debian', /debian/i],
+        ['Arch Linux', /arch/i],
+        ['Manjaro', /manjaro/i],
+        ['openSUSE', /opensuse|suse/i],
+        ['Gentoo', /gentoo/i],
+        ['Alpine Linux', /alpine/i],
+        ['Kali Linux', /kali/i],
+        ['CentOS', /centos/i],
+        ['Red Hat Linux', /red hat|rhel/i],
+    ];
+    const browserPatterns = [
+        ['Edge', /EdgA?\/|EdgiOS\//],
+        ['Opera Mini', /Opera Mini\//],
+        ['Opera', /OPR\/|Opera\/|OPiOS\//],
+        ['Vivaldi', /Vivaldi\//],
+        ['Yandex Browser', /YaBrowser\//],
+        ['Samsung Internet', /SamsungBrowser\//],
+        ['DuckDuckGo', /DuckDuckGo\//],
+        ['Huawei Browser', /HuaweiBrowser\//],
+        ['MIUI Browser', /MiuiBrowser\//],
+        ['HeyTap Browser', /HeyTapBrowser\//],
+        ['UC Browser', /UCBrowser\/|UCWEB\//],
+        ['Amazon Silk', /Silk\//],
+        ['Puffin', /Puffin\//],
+        ['Brave', /Brave\//],
+        ['LibreWolf', /LibreWolf\//],
+        ['Waterfox', /Waterfox\//],
+        ['Floorp', /Floorp\//],
+        ['SeaMonkey', /SeaMonkey\//],
+        ['Pale Moon', /PaleMoon\//],
+        ['Basilisk', /Basilisk\//],
+        ['GNU IceCat', /IceCat\//],
+        ['Iceweasel', /Iceweasel\//],
+        ['Tor Browser', /TorBrowser\//],
+        ['Firefox', /FxiOS\/|Firefox\//],
+        ['GNOME Web', /Epiphany\//],
+        ['Falkon', /Falkon\//],
+        ['Konqueror', /Konqueror\//],
+        ['qutebrowser', /qutebrowser\//i],
+        ['Midori', /Midori\//],
+        ['Chromium', /Chromium\//],
+        ['Chrome', /CriOS\/|Chrome\//],
+        ['Safari', /Safari\//],
+    ];
 
-    // ── OS from UA (reliable everywhere) ─────────────────────────────────────
+    function linuxDistro() {
+        for (const [name, pattern] of linuxDistros) {
+            if (pattern.test(ua)) return name;
+        }
+        return '';
+    }
+
+    function cleanAndroidModel(value) {
+        return String(value || '')
+            .replace(/\bBuild\/.*$/i, '')
+            .replace(/\bwv\b/i, '')
+            .replace(/\s+/g, ' ')
+            .replace(/[()]/g, '')
+            .trim()
+            .slice(0, 48);
+    }
+
+    function androidModel() {
+        const match = /\(([^)]*Android[^)]*)\)/i.exec(ua);
+        if (!match) return '';
+        const parts = match[1].split(';').map(cleanAndroidModel).filter(Boolean);
+        const androidIndex = parts.findIndex(p => /^Android\b/i.test(p));
+        const candidates = parts.slice(androidIndex + 1)
+            .filter(p => !/^(mobile|tablet|wv|linux|en[-_][a-z]+)$/i.test(p));
+        const raw = candidates[0] || '';
+        if (!raw) return '';
+        if (/^(?:samsung\s+)?sm-|^gt-|^samsung\b/i.test(raw)) return raw.toLowerCase().startsWith('samsung') ? raw : `Samsung ${raw}`;
+        if (/^pixel\b/i.test(raw)) return raw.replace(/^Pixel/i, 'Google Pixel');
+        if (/^oneplus\b|^(?:kb|in|hd|gm|ne)\d{4}/i.test(raw)) return raw.toLowerCase().startsWith('oneplus') ? raw : `OnePlus ${raw}`;
+        if (/^(?:mi|m210|m200|m190|redmi|poco)\b/i.test(raw)) return raw;
+        if (/^(?:huawei|ane-|vog-|lya-|ele-|clt-|mar-|was-)/i.test(raw)) return raw.toLowerCase().startsWith('huawei') ? raw : `Huawei ${raw}`;
+        if (/^honor\b|^(?:bnd-|jsn-|yal-)/i.test(raw)) return raw.toLowerCase().startsWith('honor') ? raw : `Honor ${raw}`;
+        if (/^(?:oppo|cph|pch|pgm|pgt|peh|pfem|pffm)/i.test(raw)) return raw.toLowerCase().startsWith('oppo') ? raw : `OPPO ${raw}`;
+        if (/^(?:realme|rmx)/i.test(raw)) return raw.toLowerCase().startsWith('realme') ? raw : `Realme ${raw}`;
+        if (/^(?:moto|motorola|xt\d)/i.test(raw)) return raw.toLowerCase().startsWith('motorola') ? raw.replace(/^motorola/i, 'Motorola') : `Motorola ${raw}`;
+        return raw;
+    }
+
+    function browserFromUa() {
+        for (const [name, pattern] of browserPatterns) {
+            if (!pattern.test(ua)) continue;
+            if (name === 'Safari' && /Chrome\/|Chromium\/|OPR\/|Edg\/|SamsungBrowser\/|YaBrowser\/|UCBrowser\//.test(ua)) continue;
+            return name;
+        }
+        return 'Browser';
+    }
+
     let os = 'Dispozitiv';
-    if (/Windows/.test(ua))                   os = 'Windows';
-    else if (/iPhone/.test(ua))               os = 'iPhone';
-    else if (/iPad/.test(ua))                 os = 'iPad';
-    else if (/Android/.test(ua))              os = 'Android';
-    else if (/Mac OS X/.test(ua))             os = 'Mac';
-    else if (/Linux/.test(ua))                os = 'Linux';
+    if (/CrOS/i.test(ua))                    os = 'Chrome OS';
+    else if (/Android/i.test(ua))            os = 'Android';
+    else if (/iPad/i.test(ua) || (platformRaw === 'MacIntel' && navigator.maxTouchPoints > 1)) os = 'iPad';
+    else if (/iPhone/i.test(ua))             os = 'iPhone';
+    else if (/Windows/.test(ua))             os = 'Windows';
+    else if (/Mac OS X|Macintosh/i.test(ua)) os = 'Mac';
+    else if (linuxDistro())                  os = linuxDistro();
+    else if (/Linux|X11/i.test(ua))          os = 'Linux';
+
+    let browser = 'Browser';
 
     // ── Browser via userAgentData (Chromium-based browsers) ──────────────────
     if (navigator.userAgentData) {
         try {
-            // getHighEntropyValues gives us the real brand list incl. Brave
-            const hints = await navigator.userAgentData.getHighEntropyValues(['platform', 'brands']);
+            const hints = await navigator.userAgentData.getHighEntropyValues(['platform', 'brands', 'mobile']);
             const brands = (hints.brands || navigator.userAgentData.brands || [])
                 .map(b => b.brand.toLowerCase());
 
-            // Override OS with the platform hint when available (more reliable than UA)
             const platform = (hints.platform || navigator.userAgentData.platform || '').toLowerCase();
             if (platform) {
-                if (/win/.test(platform))     os = 'Windows';
-                else if (/mac/.test(platform))os = 'Mac';
-                else if (/linux/.test(platform) && !/android/.test(platform)) os = 'Linux';
-                else if (/android/.test(platform)) os = 'Android';
+                if (/android/.test(platform)) os = 'Android';
+                else if (/chrome os/.test(platform)) os = 'Chrome OS';
+                else if (/win/.test(platform)) os = 'Windows';
+                else if (/ios/.test(platform)) os = os === 'iPad' ? 'iPad' : 'iPhone';
+                else if (/mac/.test(platform) && os !== 'iPad') os = 'Mac';
+                else if (/linux/.test(platform)) os = linuxDistro() || 'Linux';
             }
 
-            if (brands.some(b => b.includes('brave')))           return `${os} (Brave)`;
-            if (brands.some(b => b.includes('microsoft edge')))  return `${os} (Edge)`;
-            if (brands.some(b => b.includes('opera')))           return `${os} (Opera)`;
-            if (brands.some(b => b.includes('google chrome') || b.includes('chromium')))
-                                                                  return `${os} (Chrome)`;
+            if (brands.some(b => b.includes('brave'))) browser = 'Brave';
+            else if (brands.some(b => b.includes('microsoft edge'))) browser = 'Edge';
+            else if (brands.some(b => b.includes('opera'))) browser = 'Opera';
+            else if (brands.some(b => b.includes('vivaldi'))) browser = 'Vivaldi';
+            else if (brands.some(b => b.includes('duckduckgo'))) browser = 'DuckDuckGo';
+            else if (brands.some(b => b.includes('google chrome'))) browser = 'Chrome';
+            else if (brands.some(b => b.includes('chromium'))) browser = 'Chromium';
         } catch (e) { /* fall through */ }
     }
 
     // ── UA string fallback (Firefox, Safari, iOS browsers, older Chromium) ───
-    let browser = 'Browser';
-    if (/Edg\/|EdgA\/|EdgiOS\//.test(ua))   browser = 'Edge';
-    else if (/OPR\/|Opera\/|OPiOS\//.test(ua)) browser = 'Opera';
-    else if (/SamsungBrowser\//.test(ua))     browser = 'Samsung Internet';
-    else if (/CriOS\//.test(ua))              browser = 'Chrome';   // Chrome on iOS
-    else if (/FxiOS\//.test(ua))              browser = 'Firefox';  // Firefox on iOS
-    else if (/Firefox\//.test(ua))            browser = 'Firefox';
-    else if (/Chrome\//.test(ua))             browser = 'Chrome';
-    else if (/Safari\//.test(ua))             browser = 'Safari';
+    if (browser === 'Browser' || browser === 'Chromium') browser = browserFromUa();
 
-    return `${os} (${browser})`;
+    return `${androidModel() || os} (${browser})`;
 }
 
 async function doRegisterPasskey() {
@@ -1693,6 +1787,21 @@ function openDeviceModal(deviceToken) {
                 <span style="color:var(--sub);">Ultima utilizare passkey</span>
                 <span style="font-weight:500;">${p.passkeyLastUsed ? new Date(p.passkeyLastUsed).toLocaleString('ro-RO') : 'Nu a fost folosit'}</span>
             </div>` : '';
+        const info = p.deviceInfo || {};
+        const deviceTypeLabels = { desktop: 'Desktop', mobile: 'Telefon', tablet: 'Tabletă', unknown: 'Necunoscut' };
+        const deviceInfoRows = info.os || info.browser || info.deviceType ? `
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="color:var(--sub);">Platformă</span>
+                    <span style="font-weight:500;">${esc(info.os || '—')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="color:var(--sub);">Browser detectat</span>
+                    <span style="font-weight:500;">${esc(info.browser || '—')}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="color:var(--sub);">Tip dispozitiv</span>
+                    <span style="font-weight:500;">${esc(deviceTypeLabels[info.deviceType] || info.deviceType || '—')}</span>
+                </div>` : '';
 
         const modalBodyHtml = `
             <div style="display:grid;gap:0;">
@@ -1703,6 +1812,7 @@ function openDeviceModal(deviceToken) {
                         <button onclick="startRenamePasskey('${esc(deviceToken)}')" style="background:none;border:1px solid var(--border);cursor:pointer;color:var(--p);font-size:0.72rem;padding:2px 8px;border-radius:4px;">Redenumește</button>
                     </div>
                 </div>
+                ${deviceInfoRows}
                 <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
                     <span style="color:var(--sub);">Metode autentificare</span>
                     <span>${methodBadges}</span>

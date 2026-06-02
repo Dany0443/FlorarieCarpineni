@@ -5,9 +5,9 @@ const secureStore = require('./secureStore');
 
 const FILE_DEVICES           = path.join(__dirname, '..', 'data', 'devices.json');
 const DEVICE_COOKIE          = 'device_id';
-const DEVICE_COOKIE_MAX_AGE  = 365 * 24 * 60 * 60 * 1000; // 1 year — survives session expiry
+const DEVICE_COOKIE_MAX_AGE  = 365 * 24 * 60 * 60 * 1000; // 1 year survives session expiry
 
-// ─── persistence ──────────────────────────────────────────────────────────────
+// persistence
 
 function ensureDataDir() {
     const dir = path.dirname(FILE_DEVICES);
@@ -25,84 +25,267 @@ function saveDevices(devices) {
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+const LINUX_DISTROS = [
+    ['Ubuntu', /ubuntu/i],
+    ['Linux Mint', /linux mint|mint/i],
+    ['Pop!_OS', /pop!_os|pop_os/i],
+    ['Fedora', /fedora/i],
+    ['Debian', /debian/i],
+    ['Arch Linux', /arch/i],
+    ['Manjaro', /manjaro/i],
+    ['openSUSE', /opensuse|suse/i],
+    ['Gentoo', /gentoo/i],
+    ['Alpine Linux', /alpine/i],
+    ['Kali Linux', /kali/i],
+    ['CentOS', /centos/i],
+    ['Red Hat Linux', /red hat|rhel/i],
+];
 
-/**
- * Infer a human-readable device name from User-Agent + optional Sec-CH-UA header.
- * Sec-CH-UA is sent by Chromium-based browsers and exposes the real brand (Brave, Edge, Opera…)
- * which the UA string alone can't distinguish from Chrome.
- * Admin can always rename devices manually.
- */
-function detectDeviceName(userAgent, secChUa, secChUaFullVersionList) {
-    if (!userAgent) return 'Dispozitiv necunoscut';
+const ANDROID_VENDOR_PATTERNS = [
+    ['Samsung', /^(?:samsung\s+)?sm-|^gt-|^samsung\b/i],
+    ['Google Pixel', /^pixel\b/i],
+    ['OnePlus', /^oneplus\b|^(?:kb|in|hd|gm|ne)\d{4}/i],
+    ['Xiaomi', /^(?:mi|m210|m200|m190|redmi|poco)\b/i],
+    ['Huawei', /^(?:huawei|ane-|vog-|lya-|ele-|clt-|mar-|was-)/i],
+    ['Honor', /^honor\b|^(?:bnd-|jsn-|yal-)/i],
+    ['OPPO', /^(?:oppo|cph|pch|pgm|pgt|peh|pfem|pffm)/i],
+    ['Realme', /^(?:realme|rmx)/i],
+    ['Motorola', /^(?:moto|motorola|xt\d)/i],
+    ['Nokia', /^nokia\b/i],
+    ['Sony Xperia', /^(?:xperia|so-\d|sog\d)/i],
+    ['LG', /^(?:lg-|lm-)/i],
+    ['ASUS', /^(?:asus|zenfone|rog phone)/i],
+    ['Nothing', /^a\d{3}\b|^nothing/i],
+];
 
-    // ── OS ────────────────────────────────────────────────────────────────────
-    let os = 'Dispozitiv';
-    if (/Windows/.test(userAgent))          os = 'Windows';
-    else if (/iPhone/.test(userAgent))      os = 'iPhone';
-    else if (/iPad/.test(userAgent))        os = 'iPad';
-    else if (/Android/.test(userAgent))     os = 'Android';
-    else if (/Mac OS X/.test(userAgent))    os = 'Mac';
-    else if (/Linux/.test(userAgent))       os = 'Linux';
+const BROWSER_UA_PATTERNS = [
+    ['Edge', /EdgA?\/|EdgiOS\//],
+    ['Opera Mini', /Opera Mini\//],
+    ['Opera', /OPR\/|Opera\/|OPiOS\//],
+    ['Vivaldi', /Vivaldi\//],
+    ['Yandex Browser', /YaBrowser\//],
+    ['Samsung Internet', /SamsungBrowser\//],
+    ['DuckDuckGo', /DuckDuckGo\//],
+    ['Huawei Browser', /HuaweiBrowser\//],
+    ['MIUI Browser', /MiuiBrowser\//],
+    ['HeyTap Browser', /HeyTapBrowser\//],
+    ['UC Browser', /UCBrowser\/|UCWEB\//],
+    ['Amazon Silk', /Silk\//],
+    ['Puffin', /Puffin\//],
+    ['Brave', /Brave\//],
+    ['LibreWolf', /LibreWolf\//],
+    ['Waterfox', /Waterfox\//],
+    ['Floorp', /Floorp\//],
+    ['SeaMonkey', /SeaMonkey\//],
+    ['Pale Moon', /PaleMoon\//],
+    ['Basilisk', /Basilisk\//],
+    ['GNU IceCat', /IceCat\//],
+    ['Iceweasel', /Iceweasel\//],
+    ['Tor Browser', /TorBrowser\//],
+    ['Firefox', /FxiOS\/|Firefox\//],
+    ['GNOME Web', /Epiphany\//],
+    ['Falkon', /Falkon\//],
+    ['Konqueror', /Konqueror\//],
+    ['qutebrowser', /qutebrowser\//i],
+    ['Midori', /Midori\//],
+    ['Chromium', /Chromium\//],
+    ['Chrome', /CriOS\/|Chrome\//],
+    ['Safari', /Safari\//],
+];
 
-    // ── Browser ───────────────────────────────────────────────────────────────
-    // Priority order matters — many Chromium UA strings contain "Chrome" and "Safari".
-
-    let browser = 'Browser';
-
-    // 1. Sec-CH-UA brand list — most reliable for Chromium-based browsers.
-    //    Brave, Edge, Opera all send their real name here; plain Chrome does not include them.
-    const brandHints = [secChUa, secChUaFullVersionList].filter(Boolean).join(' ');
-    if (brandHints) {
-        if (/Brave/i.test(brandHints))           { browser = 'Brave';   }
-        else if (/"Opera"|OPR/i.test(brandHints)){ browser = 'Opera';   }
-        else if (/Microsoft Edge/i.test(brandHints)) { browser = 'Edge'; }
-        else if (/Chromium/i.test(brandHints))   { browser = 'Chrome';  }
-        else if (/Google Chrome/i.test(brandHints)) { browser = 'Chrome'; }
-    }
-
-    // 2. UA string fallbacks (used when Sec-CH-UA is absent — Firefox, Safari, older browsers)
-    if (browser === 'Browser') {
-        if (/Edg\/|EdgA\/|EdgiOS\//.test(userAgent)) {
-            browser = 'Edge';
-        } else if (/OPR\/|Opera\/|OPiOS\//.test(userAgent)) {
-            browser = 'Opera';
-        } else if (/SamsungBrowser\//.test(userAgent)) {
-            browser = 'Samsung Internet';
-        } else if (/CriOS\//.test(userAgent)) {
-            // Chrome on iOS — UA never has "Chrome" but does have "CriOS"
-            browser = 'Chrome';
-        } else if (/FxiOS\//.test(userAgent)) {
-            // Firefox on iOS
-            browser = 'Firefox';
-        } else if (/Firefox\//.test(userAgent)) {
-            browser = 'Firefox';
-        } else if (/Chrome\//.test(userAgent)) {
-            // Generic Chrome — after all other Chromium variants
-            browser = 'Chrome';
-        } else if (/Safari\//.test(userAgent)) {
-            browser = 'Safari';
-        }
-    }
-
-    return `${os} (${browser})`;
+function cleanHint(value) {
+    return String(value || '').replace(/^"|"$/g, '').trim();
 }
 
-// ─── core API ─────────────────────────────────────────────────────────────────
+function parseBrands(secChUa, secChUaFullVersionList) {
+    const raw = [secChUaFullVersionList, secChUa].filter(Boolean).join(', ');
+    const brands = [];
+    raw.replace(/"([^"]+)"/g, (_, brand) => {
+        if (!/not[ _-]?a[ _-]?brand/i.test(brand)) brands.push(brand);
+        return '';
+    });
+    return brands;
+}
 
-/**
- * Called on every successful login.
- * - If the device_id cookie maps to a known device → update lastSeen/lastIp/authMethod.
- * - Otherwise → create a new device record.
- * Returns the (possibly new) device object.
- */
-function upsertDevice(existingToken, { ip, userAgent, secChUa, secChUaFullVersionList, authMethod, passkeyCredId } = {}) {
+function detectBrowser(userAgent, secChUa, secChUaFullVersionList) {
+    const brands = parseBrands(secChUa, secChUaFullVersionList);
+    const brandText = brands.join(' ');
+    if (/Brave/i.test(brandText)) return { name: 'Brave', confidence: 95, source: 'client-hints' };
+    if (/Microsoft Edge/i.test(brandText)) return { name: 'Edge', confidence: 95, source: 'client-hints' };
+    if (/Opera|Opera GX/i.test(brandText)) return { name: 'Opera', confidence: 95, source: 'client-hints' };
+    if (/Vivaldi/i.test(brandText)) return { name: 'Vivaldi', confidence: 95, source: 'client-hints' };
+    if (/DuckDuckGo/i.test(brandText)) return { name: 'DuckDuckGo', confidence: 95, source: 'client-hints' };
+    if (/Google Chrome/i.test(brandText)) return { name: 'Chrome', confidence: 90, source: 'client-hints' };
+    if (/Chromium/i.test(brandText)) return { name: 'Chromium', confidence: 82, source: 'client-hints' };
+
+    for (const [name, pattern] of BROWSER_UA_PATTERNS) {
+        if (pattern.test(userAgent)) {
+            const isGenericSafari = name === 'Safari'
+                && /Chrome\/|Chromium\/|OPR\/|Edg\/|SamsungBrowser\/|YaBrowser\/|UCBrowser\//.test(userAgent);
+            if (!isGenericSafari) return { name, confidence: name === 'Chrome' ? 70 : 78, source: 'user-agent' };
+        }
+    }
+    return { name: 'Browser', confidence: 10, source: 'unknown' };
+}
+
+function detectOs(userAgent, secChUaPlatform) {
+    const platform = cleanHint(secChUaPlatform).toLowerCase();
+    if (platform) {
+        if (platform.includes('android')) return { name: 'Android', confidence: 92, source: 'client-hints' };
+        if (platform.includes('chrome os')) return { name: 'Chrome OS', confidence: 92, source: 'client-hints' };
+        if (platform.includes('windows')) return { name: 'Windows', confidence: 90, source: 'client-hints' };
+        if (platform.includes('mac')) return { name: 'Mac', confidence: 90, source: 'client-hints' };
+        if (platform.includes('ios')) return { name: 'iOS', confidence: 90, source: 'client-hints' };
+        if (platform.includes('linux')) return { name: detectLinuxDistro(userAgent) || 'Linux', confidence: 86, source: 'client-hints' };
+    }
+
+    if (/CrOS/i.test(userAgent)) return { name: 'Chrome OS', confidence: 88, source: 'user-agent' };
+    if (/Android/i.test(userAgent)) return { name: 'Android', confidence: 86, source: 'user-agent' };
+    if (/iPad/i.test(userAgent)) return { name: 'iPad', confidence: 86, source: 'user-agent' };
+    if (/iPhone/i.test(userAgent)) return { name: 'iPhone', confidence: 86, source: 'user-agent' };
+    if (/Windows NT 11/i.test(userAgent)) return { name: 'Windows 11', confidence: 82, source: 'user-agent' };
+    if (/Windows NT 10/i.test(userAgent)) return { name: 'Windows 10', confidence: 82, source: 'user-agent' };
+    if (/Windows/i.test(userAgent)) return { name: 'Windows', confidence: 78, source: 'user-agent' };
+    if (/Mac OS X|Macintosh/i.test(userAgent)) return { name: 'Mac', confidence: 78, source: 'user-agent' };
+
+    const distro = detectLinuxDistro(userAgent);
+    if (distro) return { name: distro, confidence: 80, source: 'user-agent' };
+    if (/Linux|X11/i.test(userAgent)) return { name: 'Linux', confidence: 70, source: 'user-agent' };
+    return { name: 'Dispozitiv', confidence: 5, source: 'unknown' };
+}
+
+function detectLinuxDistro(userAgent) {
+    for (const [name, pattern] of LINUX_DISTROS) {
+        if (pattern.test(userAgent)) return name;
+    }
+    return '';
+}
+
+function cleanAndroidModel(value) {
+    return String(value || '')
+        .replace(/\bBuild\/.*$/i, '')
+        .replace(/\bwv\b/i, '')
+        .replace(/\s+/g, ' ')
+        .replace(/[()]/g, '')
+        .trim()
+        .slice(0, 48);
+}
+
+function detectAndroidModel(userAgent) {
+    const match = /\(([^)]*Android[^)]*)\)/i.exec(userAgent);
+    if (!match) return '';
+    const parts = match[1].split(';').map(p => cleanAndroidModel(p)).filter(Boolean);
+    const androidIndex = parts.findIndex(p => /^Android\b/i.test(p));
+    const candidates = parts.slice(androidIndex + 1)
+        .filter(p => !/^(mobile|tablet|wv|linux|en[-_][a-z]+)$/i.test(p));
+    const rawModel = candidates[0] || '';
+    if (!rawModel) return '';
+    for (const [vendor, pattern] of ANDROID_VENDOR_PATTERNS) {
+        if (pattern.test(rawModel)) {
+            if (rawModel.toLowerCase().startsWith(vendor.toLowerCase())) {
+                return rawModel.replace(/^motorola/i, 'Motorola');
+            }
+            if (vendor === 'Google Pixel' && /^pixel\b/i.test(rawModel)) return rawModel.replace(/^Pixel/i, 'Google Pixel');
+            return `${vendor} ${rawModel}`.replace(/\s+/g, ' ').trim();
+        }
+    }
+    return rawModel;
+}
+
+function detectDeviceType(userAgent, secChUaMobile, osName) {
+    const mobileHint = cleanHint(secChUaMobile);
+    if (mobileHint === '?1') return 'mobile';
+    if (/iPad|Tablet|PlayBook|Silk/i.test(userAgent)) return 'tablet';
+    if (/Mobi|iPhone|iPod|Android.*Mobile|Opera Mini|IEMobile|Windows Phone/i.test(userAgent)) return 'mobile';
+    if (/Android/i.test(userAgent) && !/Mobile/i.test(userAgent)) return 'tablet';
+    if (osName === 'iPad') return 'tablet';
+    return 'desktop';
+}
+
+function detectDeviceInfo(userAgent, {
+    secChUa,
+    secChUaFullVersionList,
+    secChUaPlatform,
+    secChUaMobile,
+} = {}) {
+    const ua = String(userAgent || '');
+    if (!ua) {
+        return {
+            name: 'Dispozitiv necunoscut',
+            os: 'Dispozitiv',
+            browser: 'Browser',
+            deviceLabel: 'Dispozitiv',
+            deviceType: 'unknown',
+            confidence: 0,
+        };
+    }
+
+    const os = detectOs(ua, secChUaPlatform);
+    const browser = detectBrowser(ua, secChUa, secChUaFullVersionList);
+    const androidModel = os.name === 'Android' ? detectAndroidModel(ua) : '';
+    const deviceType = detectDeviceType(ua, secChUaMobile, os.name);
+    const deviceLabel = androidModel || os.name;
+    const confidence = os.confidence + browser.confidence + (androidModel ? 12 : 0);
+
+    return {
+        name: `${deviceLabel} (${browser.name})`,
+        os: os.name,
+        browser: browser.name,
+        deviceLabel,
+        deviceType,
+        androidModel: androidModel || null,
+        browserSource: browser.source,
+        osSource: os.source,
+        confidence,
+    };
+}
+
+function detectDeviceName(userAgent, secChUa, secChUaFullVersionList, secChUaPlatform, secChUaMobile) {
+    return detectDeviceInfo(userAgent, {
+        secChUa,
+        secChUaFullVersionList,
+        secChUaPlatform,
+        secChUaMobile,
+    }).name;
+}
+
+function shouldAutoUpdateDeviceName(device, detectedInfo) {
+    if (!device || device.userNamed || !detectedInfo || detectedInfo.name === 'Dispozitiv necunoscut') return false;
+    if (!device.name || device.name === 'Dispozitiv necunoscut') return true;
+    if (device.name === detectedInfo.name) return false;
+
+    const oldScore = Number(device.detectionScore) || 0;
+    const newScore = Number(detectedInfo.confidence) || 0;
+    const oldBrowser = /\(([^)]+)\)$/.exec(device.name || '')?.[1] || '';
+    const genericOldBrowser = ['Browser', 'Chrome', 'Chromium', 'necunoscut'].includes(oldBrowser);
+    const specificNewBrowser = !['Browser', 'Chrome', 'Chromium'].includes(detectedInfo.browser);
+    const oldDevice = String(device.name).replace(/\s+\([^)]+\)$/, '');
+    const hasBetterDeviceLabel = ['Dispozitiv', 'Android', 'Linux'].includes(oldDevice) && detectedInfo.deviceLabel !== oldDevice;
+
+    return (oldScore > 0 && newScore > oldScore) || (genericOldBrowser && specificNewBrowser) || hasBetterDeviceLabel;
+}
+
+// Core api
+function upsertDevice(existingToken, {
+    ip,
+    userAgent,
+    secChUa,
+    secChUaFullVersionList,
+    secChUaPlatform,
+    secChUaMobile,
+    authMethod,
+    passkeyCredId
+} = {}) {
     const devices = readDevices();
     let device = existingToken ? devices.find(d => d.token === existingToken) : null;
-    const detectedName = detectDeviceName(userAgent, secChUa, secChUaFullVersionList);
+    const detectedInfo = detectDeviceInfo(userAgent, {
+        secChUa,
+        secChUaFullVersionList,
+        secChUaPlatform,
+        secChUaMobile,
+    });
+    const detectedName = detectedInfo.name;
     const nowMs = Date.now();
-
-    // If token is missing/stale (ex: devices.json reset), try to reuse an existing record
-    // instead of creating duplicates on every login.
     if (!device && passkeyCredId) {
         device = devices.find(d => d && d.passkeyCredId === passkeyCredId) || null;
     }
@@ -118,17 +301,11 @@ function upsertDevice(existingToken, { ip, userAgent, secChUa, secChUaFullVersio
         if (!Array.isArray(device.authMethods)) device.authMethods = [];
         device.lastSeen = new Date().toISOString();
         if (ip)         device.lastIp = ip;
-        if (detectedName && detectedName !== 'Dispozitiv necunoscut' && detectedName !== device.name) {
-            const oldBrowser = /\(([^)]+)\)$/.exec(device.name || '')?.[1] || '';
-            const newBrowser = /\(([^)]+)\)$/.exec(detectedName)?.[1] || '';
-            const isUpgrade = oldBrowser === 'Browser'
-                || oldBrowser === 'Chrome'
-                || oldBrowser === 'necunoscut'
-                || newBrowser === 'Brave'
-                || newBrowser === 'Edge'
-                || newBrowser === 'Opera';
-            if (isUpgrade) device.name = detectedName;
+        if (detectedName && shouldAutoUpdateDeviceName(device, detectedInfo)) {
+            device.name = detectedName;
         }
+        device.info = detectedInfo;
+        device.detectionScore = Math.max(Number(device.detectionScore) || 0, detectedInfo.confidence || 0);
         if (authMethod && !device.authMethods.includes(authMethod)) {
             device.authMethods.push(authMethod);
         }
@@ -146,6 +323,9 @@ function upsertDevice(existingToken, { ip, userAgent, secChUa, secChUaFullVersio
             createdAt:   new Date().toISOString(),
             lastSeen:    new Date().toISOString(),
             lastIp:      ip || null,
+            info:        detectedInfo,
+            detectionScore: detectedInfo.confidence || 0,
+            userNamed:   false,
             authMethods: authMethod ? [authMethod] : ['password'],
             passkeyCredId: passkeyCredId || null,
         };
@@ -191,14 +371,11 @@ function renameDevice(token, name) {
     const device  = devices.find(d => d.token === token);
     if (!device) return false;
     device.name = name;
+    device.userNamed = true;
     saveDevices(devices);
     return true;
 }
 
-/**
- * Permanently revoke a device.
- * Does NOT delete the passkey credential — caller should do that separately if needed.
- */
 function revokeDevice(token) {
     if (!token) return null;
     const devices = readDevices();
@@ -209,20 +386,17 @@ function revokeDevice(token) {
     return removed; // return so caller can also delete the linked passkey
 }
 
-/** Lookup a single device by token. */
 function getDevice(token) {
     if (!token) return null;
     return readDevices().find(d => d.token === token) || null;
 }
 
-/** All devices, newest-active first. */
 function getAllDevices() {
     return readDevices().sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
 }
 
-// ─── cookie helpers ───────────────────────────────────────────────────────────
+// Cookie helper
 
-/** Set the long-lived device_id cookie. */
 function setDeviceCookie(res, token, isProduction) {
     res.cookie(DEVICE_COOKIE, token, {
         httpOnly: true,
@@ -233,7 +407,7 @@ function setDeviceCookie(res, token, isProduction) {
     });
 }
 
-/** Read the device_id cookie from an incoming request. */
+
 function getDeviceToken(req) {
     return (req.cookies && req.cookies[DEVICE_COOKIE]) || null;
 }
@@ -251,5 +425,6 @@ module.exports = {
     setDeviceCookie,
     getDeviceToken,
     detectDeviceName,
+    detectDeviceInfo,
     DEVICE_COOKIE,
 };

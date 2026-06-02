@@ -1,5 +1,5 @@
 // serverV variable is the version of the server.
-let serverV = 6.72;
+let serverV = 6.80; // improved detection
 
 if (!globalThis.crypto) { globalThis.crypto = require('crypto').webcrypto; }
 require('dotenv').config();
@@ -185,43 +185,13 @@ function sanitizeNoSQL(val) {
 }
 
 function parseUserAgent(uaRaw) {
-    const ua = String(uaRaw || '');
-    const l  = ua.toLowerCase();
-    const isBrave = l.includes('brave') || (l.includes('chrome') && l.includes('opt/') && !l.includes('edg/'));
-    const isFirefox = l.includes('firefox/') && !l.includes('seamonkey/');
-    const isSafari = l.includes('safari/') && !l.includes('chrome/') && !l.includes('chromium');
-    const isEdge   = l.includes('edg/');
-    const isOpera  = l.includes('opr/') || l.includes('opera');
-    const isChrome = !isEdge && !isOpera && !isSafari && (l.includes('chrome/') || l.includes('chromium'));
-    let browser = 'Unknown';
-    if      (isBrave)   browser = 'Brave';
-    else if (isEdge)    browser = 'Edge';
-    else if (isOpera)   browser = 'Opera';
-    else if (isChrome)  browser = 'Chrome';
-    else if (isFirefox) browser = 'Firefox';
-    else if (isSafari)  browser = 'Safari';
-
-    let os = 'Unknown';
-    if      (l.includes('windows nt 11'))      os = 'Windows 11';
-    else if (l.includes('windows nt 10'))     os = 'Windows 10';
-    else if (l.includes('windows nt 6.3'))    os = 'Windows 8.1';
-    else if (l.includes('windows nt 6.2'))    os = 'Windows 8';
-    else if (l.includes('windows nt 6.1'))    os = 'Windows 7';
-    else if (l.includes('windows'))           os = 'Windows';
-    else if (l.includes('chromeos'))          os = 'Chrome OS';
-    else if (l.includes('android'))           os = 'Android';
-    else if (l.includes('iphone') && !l.includes('ipad')) os = 'iOS';
-    else if (l.includes('ipad') || l.includes('tablet'))   os = 'iPadOS';
-    else if (l.includes('mac os x') && !l.includes('iphone')) os = 'macOS';
-    else if (l.includes('macintosh'))          os = 'macOS';
-    else if (l.includes('linux') && !l.includes('android')) os = 'Linux';
-    else if (l.includes('ubuntu'))            os = 'Ubuntu';
-    else if (l.includes('fedora'))            os = 'Fedora';
-    else if (l.includes('debian'))            os = 'Debian';
-
-    const isMobile = /mobi|android|iphone|ipad|ipod|webos|blackberry|iemobile|opera mini/i.test(ua);
-    const isTablet = /(ipad|tablet|playbook|silk|tablet pc)/i.test(ua) && !/mobi/i.test(ua);
-    return { os, browser, isMobile, isTablet };
+    const info = deviceManager.detectDeviceInfo(uaRaw);
+    return {
+        os: info.os && info.os !== 'Dispozitiv' ? info.os : 'Unknown',
+        browser: info.browser && info.browser !== 'Browser' ? info.browser : 'Unknown',
+        isMobile: info.deviceType === 'mobile',
+        isTablet: info.deviceType === 'tablet',
+    };
 }
 
 function telemetryDayKey(tsMs) {
@@ -960,6 +930,8 @@ function requireAdm(req, res, next) {
                 userAgent:  req.headers['user-agent'],
                 secChUa:    req.headers['sec-ch-ua'],
                 secChUaFullVersionList: req.headers['sec-ch-ua-full-version-list'],
+                secChUaPlatform: req.headers['sec-ch-ua-platform'],
+                secChUaMobile: req.headers['sec-ch-ua-mobile'],
                 authMethod: 'session-restore',
             });
         }
@@ -989,6 +961,8 @@ function requireAdmPage(req, res, next) {
                 userAgent:  req.headers['user-agent'],
                 secChUa:    req.headers['sec-ch-ua'],
                 secChUaFullVersionList: req.headers['sec-ch-ua-full-version-list'],
+                secChUaPlatform: req.headers['sec-ch-ua-platform'],
+                secChUaMobile: req.headers['sec-ch-ua-mobile'],
                 authMethod: 'session-restore',
             });
         }
@@ -1437,6 +1411,8 @@ app.post('/api/admops/login', loginLimiter, async (req, res) => {
         userAgent:  req.headers['user-agent'],
         secChUa:    req.headers['sec-ch-ua'],
         secChUaFullVersionList: req.headers['sec-ch-ua-full-version-list'],
+        secChUaPlatform: req.headers['sec-ch-ua-platform'],
+        secChUaMobile: req.headers['sec-ch-ua-mobile'],
         authMethod: 'password',
     });
 
@@ -1700,6 +1676,8 @@ app.post('/api/admops/webauthn/verify-authentication', webauthnVerifyLimiter, as
             userAgent:     req.headers['user-agent'],
             secChUa:       req.headers['sec-ch-ua'],
             secChUaFullVersionList: req.headers['sec-ch-ua-full-version-list'],
+            secChUaPlatform: req.headers['sec-ch-ua-platform'],
+            secChUaMobile: req.headers['sec-ch-ua-mobile'],
             authMethod:    'passkey',
             passkeyCredId: cred.credentialID,
         });
@@ -1764,6 +1742,7 @@ app.get('/api/admops/passkeys', requireAdm, (req, res) => {
             lastSeen:         d.lastSeen,
             lastIp:           d.lastIp,
             authMethods:      d.authMethods,
+            deviceInfo:       d.info || null,
             passkeyCredId:    d.passkeyCredId || null,
             passkeyLastUsed:  linkedCred?.lastUsed || null,
             type:             d.authMethods.includes('passkey') ? 'passkey' : 'password',
@@ -1824,6 +1803,7 @@ app.get('/api/admops/my-device', requireAdm, (req, res) => {
         token:         device.token,
         name:          device.name,
         authMethods:   device.authMethods,
+        info:          device.info || null,
         passkeyCredId: device.passkeyCredId || null,
         lastSeen:      device.lastSeen,
         createdAt:     device.createdAt,
