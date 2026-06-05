@@ -704,9 +704,10 @@ textarea {
 }
 
 .hero {
-  height: 100svh;
+  height: auto;
   min-height: 100svh;
-  padding: 70px 20px 0;
+  min-height: var(--hero-h, 100svh);
+  padding: 70px 20px 40px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -718,7 +719,7 @@ textarea {
 .hero-container {
   width: 100%;
   max-width: 1200px;
-  margin-top: clamp(118px, 15svh, 168px);
+  margin-top: clamp(60px, 8svh, 120px);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
@@ -2102,7 +2103,7 @@ body.cart-open .lb-controls {
 
   /* == Hero: centered editorial == */
   .hero {
-    min-height: auto;
+    min-height: var(--hero-h, 100svh);
     height: auto;
     padding: 88px clamp(2rem, 6vw, 5rem) 3.5rem;
     align-items: flex-start;
@@ -2366,7 +2367,8 @@ body.cart-open .lb-controls {
 
   .hero {
     height: auto;
-    min-height: auto;
+    min-height: var(--hero-h, 100svh);
+    align-items: flex-start;
     overflow: visible;
   }
 
@@ -2644,7 +2646,7 @@ body.cart-open .lb-controls {
 @media (max-width: 480px) {
   .hero {
     height: auto;
-    min-height: auto;
+    min-height: var(--hero-h, 100svh);
     padding: clamp(26px, 4.2svh, 44px) 20px calc(18px + env(safe-area-inset-bottom));
     align-items: flex-start;
     overflow: visible;

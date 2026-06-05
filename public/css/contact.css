@@ -37,3 +37,13 @@ a.info-card:hover {
 .char-count.warn { color: #cc6600; }
 .char-count.over { color: #aa0132; }
 .cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Sticky footer ── */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+footer {
+    margin-top: auto !important;
+}

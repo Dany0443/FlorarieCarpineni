@@ -731,11 +731,17 @@ function showAdmin() {
     const adminScreen = document.getElementById('admin-screen');
     if (adminScreen) adminScreen.classList.add('visible');
     // Restore the page from URL on initial load
-    const urlPage = new URLSearchParams(window.location.search).get('page');
+    const sp = new URLSearchParams(window.location.search);
+    const urlPage = sp.get('page');
     const validPages = ['dashboard', 'orders', 'products', 'telemetry', 'settings'];
     const startPage = validPages.includes(urlPage) ? urlPage : 'dashboard';
     navigate(startPage, false);
     loadProducts(); // preload so edit works from any tab
+    // Auto-open add product modal if URL has ?addproduct
+    if (sp.has('addproduct')) {
+        // Small delay so the page is visible first
+        setTimeout(openAddProdModal, 80);
+    }
 }
 
 function navigate(page, pushState = true) {
@@ -750,10 +756,7 @@ function navigate(page, pushState = true) {
 }
 document.querySelectorAll('.nav-tab,.btab').forEach(t => t.addEventListener('click', ()=>navigate(t.dataset.page)));
 
-// Handle browser back/forward buttons
-window.addEventListener('popstate', e => {
-    if (e.state?.page) navigate(e.state.page, false);
-});
+// popstate is handled in the Add Product Modal section above
 
 function fmtDate(iso) {
     const d = new Date(iso);
@@ -1470,6 +1473,8 @@ document.getElementById('add-btn').addEventListener('click', async ()=>{
             toast('Produs adăugat!','success');
             ['f-name','f-price','f-family','f-desc','f-care','f-note'].forEach(id=>document.getElementById(id).value='');
             preview.classList.remove('visible'); uploadedFile=null; fileInput.value='';
+            clearAddProdDraft();
+            closeAddProdModal();
             loadProducts();
         } else toast(d.error,'error');
     } catch { toast('Eroare la adăugare.','error'); }
@@ -1565,6 +1570,130 @@ document.getElementById('e-delete').addEventListener('click', async ()=>{
 document.getElementById('dash-ref').addEventListener('click',  loadDashboard);
 document.getElementById('orders-ref').addEventListener('click',loadOrders);
 document.getElementById('prod-ref').addEventListener('click',  loadProducts);
+
+// ── Add Product Modal — URL state, autosave draft ──────────────────────────
+const ADD_PROD_DRAFT_KEY = 'admin_addprod_draft';
+
+function getAddProdDraft() {
+    try { return JSON.parse(localStorage.getItem(ADD_PROD_DRAFT_KEY) || 'null'); } catch { return null; }
+}
+function saveAddProdDraft() {
+    const draft = {
+        name:   document.getElementById('f-name')?.value   || '',
+        price:  document.getElementById('f-price')?.value  || '',
+        cat:    document.getElementById('f-cat')?.value    || 'Exotic',
+        family: document.getElementById('f-family')?.value || '',
+        desc:   document.getElementById('f-desc')?.value   || '',
+        care:   document.getElementById('f-care')?.value   || '',
+        note:   document.getElementById('f-note')?.value   || '',
+    };
+    const hasContent = Object.values(draft).some(v => v !== '' && v !== 'Exotic');
+    if (hasContent) {
+        localStorage.setItem(ADD_PROD_DRAFT_KEY, JSON.stringify(draft));
+        showDraftBadge();
+    }
+}
+function clearAddProdDraft() {
+    localStorage.removeItem(ADD_PROD_DRAFT_KEY);
+    hideDraftBadge();
+}
+function showDraftBadge() {
+    const badge = document.getElementById('add-prod-draft-badge');
+    if (badge) badge.classList.add('visible');
+}
+function hideDraftBadge() {
+    const badge = document.getElementById('add-prod-draft-badge');
+    if (badge) badge.classList.remove('visible');
+}
+function restoreAddProdDraft() {
+    const draft = getAddProdDraft();
+    if (!draft) return;
+    if (draft.name)   document.getElementById('f-name').value   = draft.name;
+    if (draft.price)  document.getElementById('f-price').value  = draft.price;
+    if (draft.cat)    document.getElementById('f-cat').value    = draft.cat;
+    if (draft.family) document.getElementById('f-family').value = draft.family;
+    if (draft.desc)   document.getElementById('f-desc').value   = draft.desc;
+    if (draft.care)   document.getElementById('f-care').value   = draft.care;
+    if (draft.note)   document.getElementById('f-note').value   = draft.note;
+    showDraftBadge();
+}
+
+function openAddProdModal() {
+    const overlay = document.getElementById('add-prod-overlay');
+    if (!overlay) return;
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    restoreAddProdDraft();
+    // Push URL state: ?page=products&addproduct
+    const sp = new URLSearchParams(window.location.search);
+    sp.set('page', 'products');
+    sp.set('addproduct', '');
+    history.pushState({ page: 'products', addproduct: true }, '', '?' + sp.toString().replace(/=(?=&|$)/g, ''));
+    document.getElementById('show-add-prod').textContent = 'Adaugă produs';
+}
+function closeAddProdModal() {
+    const overlay = document.getElementById('add-prod-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+    // Remove addproduct from URL
+    const sp = new URLSearchParams(window.location.search);
+    sp.delete('addproduct');
+    history.pushState({ page: 'products' }, '', sp.toString() ? '?' + sp.toString() : '?page=products');
+}
+
+// Wire the "Adaugă produs" button on the products page
+const addProdToggleBtn = document.getElementById('show-add-prod');
+if (addProdToggleBtn) {
+    addProdToggleBtn.addEventListener('click', openAddProdModal);
+}
+// Close button inside modal
+document.getElementById('add-prod-modal-close')?.addEventListener('click', closeAddProdModal);
+// Click outside modal body
+document.getElementById('add-prod-overlay')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('add-prod-overlay')) closeAddProdModal();
+});
+// Clear draft button
+document.getElementById('add-prod-clear-draft')?.addEventListener('click', () => {
+    ['f-name','f-price','f-family','f-desc','f-care','f-note'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const catEl = document.getElementById('f-cat');
+    if (catEl) catEl.value = 'Exotic';
+    const preview = document.getElementById('drop-preview');
+    if (preview) { preview.classList.remove('visible'); }
+    uploadedFile = null;
+    const fi = document.getElementById('f-img-file');
+    if (fi) fi.value = '';
+    clearAddProdDraft();
+});
+
+// Autosave on every input change inside the modal
+document.getElementById('add-prod-overlay')?.addEventListener('input', saveAddProdDraft);
+document.getElementById('add-prod-overlay')?.addEventListener('change', saveAddProdDraft);
+
+// Handle browser back while modal is open (popstate)
+window.addEventListener('popstate', e => {
+    const sp = new URLSearchParams(window.location.search);
+    const overlay = document.getElementById('add-prod-overlay');
+    if (overlay && overlay.classList.contains('open') && !sp.has('addproduct')) {
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    } else if (!overlay?.classList.contains('open') && sp.has('addproduct')) {
+        openAddProdModal();
+    }
+    if (e.state?.page) navigate(e.state.page, false);
+});
+
+// On page load, auto-open if URL has ?addproduct
+(function checkAddProductUrl() {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.has('addproduct')) {
+        // Will be opened after showAdmin() is called; schedule it
+        window._openAddProdOnLoad = true;
+    }
+})();
 
 setInterval(() => {
     if (document.hidden) return;

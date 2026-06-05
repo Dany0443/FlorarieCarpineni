@@ -1,5 +1,11 @@
+const loaderStart = Date.now();
+
 window.addEventListener('load', () => {
-            document.getElementById('loader').classList.add('hidden');
+            const elapsed = Date.now() - loaderStart;
+            const remaining = Math.max(0, 400 - elapsed);
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, remaining);
         });
 
         function trackTelemetry(event, data) {
@@ -58,7 +64,6 @@ window.addEventListener('load', () => {
 
                 if (data.success) {
                     trackTelemetry('contact_submit', { status: 'success' });
-                    // Am inlocuit notif_added cu un mesaj corect de contact
                     showFeedback('success', data.message || 'Mesajul a fost trimis cu succes! Vă vom contacta în curând.');
                     document.getElementById('contactForm').reset();
                     msgCount.textContent = '0 / 1000';

@@ -234,6 +234,10 @@ const LuciUI = (function(window, document) {
         const setVh = () => {
             const viewportHeight = window.visualViewport?.height || window.innerHeight;
             document.documentElement.style.setProperty('--app-vh', `${viewportHeight * 0.01}px`);
+
+            // --hero-h: always innerHeight — on real phones this already excludes
+            // browser chrome after load; on DevTools it matches the simulated frame exactly.
+            document.documentElement.style.setProperty('--hero-h', `${window.innerHeight}px`);
         };
 
         let rafId = null;

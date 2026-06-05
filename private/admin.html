@@ -190,43 +190,18 @@
       <div class="panel">
         <div class="panel-head">
           <span class="panel-title">Catalog</span>
-          <button class="btn-ghost" id="prod-ref">Reîncarcă</button>
+          <div class="panel-actions">
+            <button class="btn-ghost" id="prod-ref">Reîncarcă</button>
+            <button class="btn btn-p" type="button" id="show-add-prod">Adaugă produs</button>
+          </div>
         </div>
         <div class="prod-list" id="prod-list"><div class="empty">Niciun produs.</div></div>
         <div class="prod-grid" id="prod-grid"><div class="empty" style="grid-column:1/-1;">Niciun produs.</div></div>
       </div>
 
-      <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-head"><span class="panel-title">Adaugă produs nou</span></div>
-        <div class="panel-body">
-          <div class="form-grid">
-            <div class="fg"><label>Nume *</label><input type="text"   id="f-name"   placeholder="ex: Trandafir Regal"></div>
-            <div class="fg"><label>Preț MDL *</label><input type="number" id="f-price" placeholder="150" min="1"></div>
-            <div class="fg"><label>Categorie</label>
-              <select id="f-cat">
-                <option>Exotic</option><option>Classic</option>
-                <option>Elegant</option><option value="mix">Mix</option><option>General</option>
-              </select>
-            </div>
-            <div class="fg"><label>Familie botanică</label><input type="text" id="f-family" placeholder="ex: Rosaceae"></div>
-            <div class="fg full"><label>Descriere</label><textarea id="f-desc" placeholder="Descrie floarea..."></textarea></div>
-            <div class="fg full"><label>Îngrijire</label><textarea id="f-care" placeholder="Instrucțiuni de îngrijire..."></textarea></div>
-            <div class="fg full"><label>Notă</label><input type="text" id="f-note" placeholder="Notă suplimentară..."></div>
-            <div class="fg full">
-              <label>Imagine</label>
-              <div class="drop-zone" id="drop-zone">
-                <input type="file" id="f-img-file" accept="image/*">
-                <div class="drop-hint">Trage imaginea sau <strong>apasă să alegi</strong><br><span style="font-size:0.7rem;">PNG · JPG · AVIF · WEBP · max 5MB</span></div>
-                <img class="drop-preview" id="drop-preview" alt="">
-              </div>
-            </div>
-          </div>
-          <div style="margin-top:16px;">
-            <button class="btn btn-p btn-full" id="add-btn">Adaugă în catalog</button>
-          </div>
-        </div>
-      </div>
     </div>
+
+
 
     <!-- telemetry -->
     <div class="page" id="page-telemetry">
@@ -469,7 +444,51 @@
   </div>
 </div>
 
+<!-- Add Product modal -->
+<div class="modal-overlay" id="add-prod-overlay">
+  <div class="modal modal-addprod">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <span class="modal-head-title">Adaugă produs nou</span>
+      <button class="modal-close" id="add-prod-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="addprod-autosave-badge" id="add-prod-draft-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        Draft salvat
+      </div>
+      <div class="form-grid">
+        <div class="fg"><label>Nume *</label><input type="text" id="f-name" placeholder="ex: Trandafir Regal" autocomplete="off"></div>
+        <div class="fg"><label>Preț MDL *</label><input type="number" id="f-price" placeholder="150" min="1"></div>
+        <div class="fg"><label>Categorie</label>
+          <select id="f-cat">
+            <option>Exotic</option><option>Classic</option>
+            <option>Elegant</option><option value="mix">Mix</option><option>General</option>
+          </select>
+        </div>
+        <div class="fg"><label>Familie botanică</label><input type="text" id="f-family" placeholder="ex: Rosaceae" autocomplete="off"></div>
+        <div class="fg full"><label>Descriere</label><textarea id="f-desc" placeholder="Descrie floarea..."></textarea></div>
+        <div class="fg full"><label>Îngrijire</label><textarea id="f-care" placeholder="Instrucțiuni de îngrijire..."></textarea></div>
+        <div class="fg full"><label>Notă</label><input type="text" id="f-note" placeholder="Notă suplimentară..." autocomplete="off"></div>
+        <div class="fg full">
+          <label>Imagine</label>
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="f-img-file" accept="image/*">
+            <div class="drop-hint">Trage imaginea sau <strong>apasă să alegi</strong><br><span style="font-size:0.7rem;">PNG · JPG · AVIF · WEBP · max 5MB</span></div>
+            <img class="drop-preview" id="drop-preview" alt="">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions addprod-modal-actions">
+        <button class="btn btn-p" id="add-btn">Adaugă în catalog</button>
+        <button class="btn btn-ghost" id="add-prod-clear-draft">Șterge draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Edit modal -->
+
 <div class="modal-overlay" id="edit-overlay">
   <div class="modal">
     <div class="modal-handle"></div>

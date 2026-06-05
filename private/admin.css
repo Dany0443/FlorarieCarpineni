@@ -457,6 +457,17 @@ body {
 	justify-content:space-between;
 	gap:10px;
 }
+.panel-actions {
+	display:flex;
+	align-items:center;
+	gap:10px;
+}
+#add-prod-panel {
+	display:none;
+}
+#add-prod-panel.visible {
+	display:block;
+}
 .panel-title {
 	font-family:var(--fh);
 	font-size:1.05rem;
@@ -3047,5 +3058,61 @@ tr:hover td {
   #page-dashboard .dash-reveal-item {
     opacity: 1;
     animation: none;
+  }
+}
+
+/* ── Add Product Modal ──────────────────────────────────────────────────── */
+
+/* The modal itself gets a slightly taller max-height to fit the form */
+#add-prod-overlay .modal {
+  max-height: 92dvh;
+}
+
+/* On mobile, the add-prod modal slides up as a sheet */
+@media (max-width: 700px) {
+  #add-prod-overlay .modal {
+    max-height: 96dvh;
+    border-radius: var(--r) var(--r) 0 0;
+  }
+}
+
+/* Autosave badge */
+.addprod-autosave-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 22%, transparent);
+  padding: 3px 10px 3px 7px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+.addprod-autosave-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Actions row at the bottom of the add-product modal */
+.addprod-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.addprod-modal-actions .btn {
+  flex: 1 1 140px;
+}
+
+@media (max-width: 400px) {
+  .addprod-modal-actions .btn {
+    flex: 1 1 100%;
   }
 }
