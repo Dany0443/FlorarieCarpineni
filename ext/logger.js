@@ -60,7 +60,7 @@ class Logger {
     
     // Time formatters
     _timestampISO()  { return new Date().toISOString(); }
-    _timestampTime() { return new Date().toISOString().substr(11, 12); } // HH:MM:SS.mmm
+    _timestampTime() { return new Date().toISOString().slice(11, 23); } // HH:MM:SS.mmm
 
     
     // Rotate file if too large
