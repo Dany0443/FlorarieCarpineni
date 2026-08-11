@@ -33,7 +33,7 @@
     "geoip-lite": "^2.0.1",
     "jsdom": "^29.1.1",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.5",
+    "nodemailer": "^9.0.1",
     "pdfkit": "^0.18.0",
     "redis": "^5.12.1",
     "session-file-store": "^1.5.0",
