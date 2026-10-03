@@ -1,3 +1,9 @@
+> **Repository Status: Archived**
+>
+> This repository has been archived and is no longer actively maintained. The codebase is preserved for reference, documentation, and historical purposes.
+
+
+
 # Luci Boutique
 
 Site pentru o florarie, facut de Alexandru si Dan pentru **Tekwill Junior Ambassadors**.
